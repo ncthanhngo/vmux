@@ -8,26 +8,15 @@ struct AgentCommand: Identifiable, Hashable {
     let args: [String]
 }
 
-/// Presets for the tab "+" menu. Agents launch through the user's login shell
-/// so they inherit the full PATH (a Finder-launched app otherwise has only a
-/// minimal PATH, hiding tools like `claude` installed in ~/.local/bin).
+/// vmux spawns a plain login-shell terminal. The user runs whatever AI CLI they
+/// have installed (claude, codex, …) inside it — vmux does not bundle or choose
+/// an agent. A login shell ensures the user's full PATH is available.
 enum AgentLauncher {
     static var loginShell: String {
         ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
     }
 
     static var shell: AgentCommand {
-        AgentCommand(id: "shell", title: "shell", cmd: loginShell, args: ["-l"])
+        AgentCommand(id: "terminal", title: "terminal", cmd: loginShell, args: ["-l"])
     }
-
-    static func agent(_ name: String) -> AgentCommand {
-        // `-lc 'exec <name>'`: login shell resolves PATH, then replaces itself
-        // with the agent so the agent owns the PTY directly.
-        AgentCommand(id: name, title: name, cmd: loginShell, args: ["-l", "-c", "exec \(name)"])
-    }
-
-    static var claude: AgentCommand { agent("claude") }
-    static var codex: AgentCommand { agent("codex") }
-
-    static var presets: [AgentCommand] { [shell, claude, codex] }
 }

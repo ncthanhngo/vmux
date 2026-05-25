@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Center-area tab strip: one chip per open terminal tab plus a "+" menu to
-/// spawn a shell or agent.
+/// Center-area tab strip: one chip per open terminal tab plus a "+" button that
+/// opens a new terminal. (vmux doesn't pick an AI — run claude/codex/etc.
+/// yourself inside the terminal.)
 struct TabBarView: View {
     @EnvironmentObject var app: AppState
 
@@ -20,24 +21,21 @@ struct TabBarView: View {
                     onClose: { app.closeTab(tab.id) }
                 )
             }
-            Menu {
-                ForEach(AgentLauncher.presets) { agent in
-                    Button(agent.title.capitalized) { app.newTab(agent) }
-                }
+            Button {
+                app.newTab(AgentLauncher.shell)
             } label: {
-                Image(systemName: "plus").font(.system(size: 12))
+                Image(systemName: "plus").font(.system(size: 11))
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .frame(width: 26, height: 26)
+            .buttonStyle(.plain)
+            .frame(width: 22, height: 20)
             .foregroundStyle(Theme.label3)
             .disabled(app.selectedWorkspace == nil)
+            .help("New terminal")
 
             Spacer()
         }
         .padding(.horizontal, 8)
-        .frame(height: 38)
+        .frame(height: 28)
         .background(Theme.window)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Theme.separator).frame(height: 0.5)
@@ -63,10 +61,10 @@ private struct TabChip: View {
             }
         }
         .foregroundStyle(selected ? Theme.label : Theme.label2)
-        .padding(.horizontal, 13)
-        .frame(height: 30)
+        .padding(.horizontal, 11)
+        .frame(height: 22)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(selected ? Theme.content : (hovering ? Theme.card : Color.clear))
         )
         .contentShape(Rectangle())

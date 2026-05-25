@@ -8,6 +8,7 @@ struct MainSplitView: View {
     @State private var showChromeImport = false
     @State private var showDiffReview = false
     @State private var markdownFile: URL?
+    @State private var codeFile: URL?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,23 +41,31 @@ struct MainSplitView: View {
 
     private func rightSidebar(_ ws: WorkspaceDTO) -> some View {
         VStack(spacing: 0) {
-            ScrollView { rightPanels(ws) }
-                .frame(maxHeight: .infinity)
-                .sheet(isPresented: $showDiffReview) {
-                    if let pending = app.diffReview.pending.first {
-                        DiffReviewView(model: app.diffReview, pending: pending)
-                            .frame(minWidth: 560, minHeight: 420)
-                    }
-                }
+            // Files first (primary browsing surface), observability panels below.
+            VStack(alignment: .leading, spacing: 4) {
+                Text("FILES").font(Typo.sectionHeader).foregroundStyle(Theme.label3)
+                    .padding(.horizontal, 14).padding(.top, 10)
+                FileTreeView(workspace: ws, onOpenFile: openFile, onOpenInEditor: { openInEditor($0, ws: ws) })
+            }
+            .frame(maxHeight: .infinity)
             Divider()
-            FileTreeView(workspace: ws, onOpenFile: openFile, onOpenInEditor: { openInEditor($0, ws: ws) })
-                .frame(maxHeight: 280)
-                .sheet(item: markdownBinding) { item in
-                    MarkdownPaneView(fileURL: item.url).frame(minWidth: 560, minHeight: 480)
-                }
+            ScrollView { rightPanels(ws) }
+                .frame(maxHeight: 320)
+        }
+        .sheet(isPresented: $showDiffReview) {
+            if let pending = app.diffReview.pending.first {
+                DiffReviewView(model: app.diffReview, pending: pending).frame(minWidth: 560, minHeight: 420)
+            }
         }
         .sheet(item: replayBinding) { item in
             ReplayView(model: ReplayModel(client: app.client, sessionID: item.id), onClose: { replaySession = nil })
+        }
+        .sheet(item: markdownBinding) { item in
+            MarkdownPaneView(fileURL: item.url).frame(minWidth: 560, minHeight: 480)
+        }
+        .sheet(item: codeBinding) { item in
+            CodeViewerPaneView(fileURL: item.url, onOpenInEditor: { openInEditor(item.url, ws: ws) })
+                .frame(minWidth: 640, minHeight: 480)
         }
     }
 
@@ -68,6 +77,11 @@ struct MainSplitView: View {
     private var markdownBinding: Binding<MarkdownItem?> {
         Binding(get: { markdownFile.map { MarkdownItem(url: $0) } },
                 set: { if $0 == nil { markdownFile = nil } })
+    }
+
+    private var codeBinding: Binding<MarkdownItem?> {
+        Binding(get: { codeFile.map { MarkdownItem(url: $0) } },
+                set: { if $0 == nil { codeFile = nil } })
     }
 
     @ViewBuilder private func rightPanels(_ ws: WorkspaceDTO) -> some View {
@@ -92,7 +106,7 @@ struct MainSplitView: View {
         if url.pathExtension.lowercased() == "md" {
             markdownFile = url
         } else {
-            NSWorkspace.shared.open(url)
+            codeFile = url // in-app read-only code viewer
         }
     }
 
