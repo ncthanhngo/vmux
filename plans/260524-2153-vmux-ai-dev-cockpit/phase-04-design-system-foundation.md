@@ -1,7 +1,7 @@
 ---
 phase: 4
 title: "Design system foundation (Apple HIG, SwiftUI)"
-status: pending
+status: done
 priority: P1
 effort: "1w"
 dependencies: [1]
@@ -85,18 +85,25 @@ Token values (from mockup, dark / light):
 
 ## Todo List
 
-- [ ] Color tokens resolve light/dark + follow system accent
-- [ ] VibrancyView renders sidebar material correctly (blur visible over content)
-- [ ] All components have light+dark SwiftUI previews matching mockup
-- [ ] DesignSystemGallery screen assembles everything
-- [ ] Live macOS appearance switch updates entire UI with no relaunch
-- [ ] No hex literals outside Tokens/Colors.swift
+- [x] Color tokens resolve light/dark + follow system accent — dynamic `NSColor` providers; accent = `controlAccentColor`
+- [x] VibrancyView renders sidebar material — `NSVisualEffectView` bridge (`.sidebar`/`.headerView`/`.underWindow`); blur visibility needs live eyes
+- [x] All components have light+dark SwiftUI previews
+- [x] DesignSystemGallery assembles everything (wired as app root via ContentView)
+- [~] Live macOS appearance switch updates UI — confirmed correct by review (dynamic colors resolve per-render); not visually verified live (no Screen Recording perm)
+- [x] No hex literals outside Tokens/Colors.swift — verified by grep
+
+## Implementation Notes (2026-05-25)
+
+- Files under `app/Vmux/DesignSystem/`: Tokens (Colors/Typography/Spacing/Materials), Bridge (VibrancyView), Components (Titlebar, SegmentedControl, CapsuleButton, CardPane, SidebarRow, StatusBar, StatusPill, BadgePill, GroupedCard, PanelSwitcher), DesignSystemGallery, README.
+- Token namespace is `Theme` (enum) + `Typo`/`Space`/`Radius` (deviation from the plan's `Color` extensions — cleaner, avoids polluting `Color`, and grep-friendly). Hex confined to `Colors.swift` (grep-verified).
+- App builds clean (`xcodebuild BUILD SUCCEEDED`) and launches rendering the gallery without crashing; sidecar still spawns. **Pixel-fidelity vs the mockup NOT verified** — no Screen Recording permission to screenshot headlessly. Review via Xcode `#Preview`s or by running the app.
+- Code review fix: `StatusDot` now drives its pulse from `status` via `onChange` (not only `onAppear`), so a row reused in a live list starts/stops pulsing correctly. Theme-freeze concern reviewed and disproven.
 
 ## Success Criteria
 
-- [ ] Side-by-side: DesignSystemGallery in dark mode is visually indistinguishable from `vmux-ui-mockup-apple.html` dark; same for light
-- [ ] Phase 5 shell assembles its UI purely from these components (no new styling)
-- [ ] Switching system accent color (System Settings) recolors the app accent live
+- [~] Side-by-side gallery vs mockup (dark+light) — **needs user visual check** (cannot screenshot headlessly). Tokens translated 1:1 from the mockup; previews provided.
+- [ ] Phase 5 shell assembles purely from these components — pending phase 5
+- [~] System accent recolors app live — uses `controlAccentColor` (dynamic); not visually verified
 
 ## Risk Assessment
 

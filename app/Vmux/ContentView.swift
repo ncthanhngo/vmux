@@ -2,18 +2,9 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "terminal")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(.secondary)
-            Text("vmux")
-                .font(.largeTitle.weight(.semibold))
-            Text("AI terminal observatory")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
-        .frame(minWidth: 720, minHeight: 480)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Until the phase-5 shell lands, the app root renders the design-system
+        // gallery so the components can be visually verified against the mockup.
+        DesignSystemGallery()
     }
 }
 
