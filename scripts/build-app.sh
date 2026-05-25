@@ -8,11 +8,10 @@ APP_DIR="$REPO_ROOT/app"
 CONFIGURATION="${CONFIGURATION:-Debug}"
 DERIVED_DATA="${DERIVED_DATA:-$REPO_ROOT/build/DerivedData}"
 
-# Sidecar must exist before the app's embed phase runs.
-if [ ! -f "$REPO_ROOT/sidecar/bin/vmux-sidecar" ]; then
-  echo "Sidecar binary missing — building it first…"
-  "$REPO_ROOT/scripts/build-sidecar.sh"
-fi
+# Always rebuild the sidecar so the app embeds current code (the embed phase
+# copies sidecar/bin/vmux-sidecar). Skipping when present would ship a stale
+# binary after sidecar changes.
+"$REPO_ROOT/scripts/build-sidecar.sh"
 
 echo "Generating Xcode project…"
 ( cd "$APP_DIR" && xcodegen generate )

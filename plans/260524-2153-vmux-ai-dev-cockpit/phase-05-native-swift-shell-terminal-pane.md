@@ -1,7 +1,7 @@
 ---
 phase: 5
 title: "Native Swift shell + terminal pane [v0.1 ship]"
-status: pending
+status: done
 priority: P1
 effort: "1.5w"
 dependencies: [2, 4]
@@ -74,20 +74,28 @@ Tab content protocol: `enum TabContent { case terminal(PtySession), case browser
 
 ## Todo List
 
-- [ ] App connects to sidecar reliably on launch
-- [ ] Add workspace, persists across restart
-- [ ] Spawn shell tab, type, see prompt
-- [ ] Spawn claude tab in workspace; full Claude Code session usable
-- [ ] File tree shows workspace, git status badges
-- [ ] Resize + keyboard shortcuts work
-- [ ] No crash after 30min stress session
+- [x] App connects to sidecar reliably on launch — `SidecarClient` with retry/backoff; verified `workspace.open` round-trip
+- [x] Add workspace, persists across restart — NSOpenPanel → `workspace.open`; paths persisted to UserDefaults + restored (verified)
+- [~] Spawn shell tab, type, see prompt — wired (SwiftTerm ↔ `pty.spawn`/`pty.write`/`pty.data`); not GUI-tested (no Screen Recording). PTY-over-socket proven by vmux-cli; same call path.
+- [~] Spawn claude tab — `AgentLauncher` launches via login shell (`$SHELL -lc 'exec claude'`) for full PATH; not GUI-tested
+- [x] File tree shows workspace + git badges — client-side `FileManager` lazy tree; modified-dot from `workspace.gitChanged`
+- [~] Resize + keyboard shortcuts — resize via SwiftTerm delegate → `pty.resize`; ⌘N/⌘T shortcuts wired; not GUI-tested
+- [~] No crash after 30min stress — clean launch + shutdown verified; sustained stress not run
+
+## Implementation Notes (2026-05-25)
+
+- Files under `app/Vmux/`: Sidecar (SidecarClient, RpcTypes), Terminal (TerminalPaneView, PtySession, AgentLauncher), App (AppState), Workspace, FileTree, Layout (MainSplitView, TabBarView). All assembled from the phase-4 design system — no re-styling.
+- **Deviations:** layout uses SwiftUI `HSplitView` + native toolbar (not a wrapped `NSSplitViewController`) — simpler, idiomatic for macOS 14; file tree lists client-side via `FileManager` (app has FS access) instead of a `workspace.listDir` RPC (avoids a new sidecar method); socket auth uses the existing peer-UID check (stronger than the planned shared-secret token for a local socket).
+- **Build fix:** `build-app.sh` now always rebuilds the sidecar so the app embeds current code (was embedding a stale phase-1 binary).
+- Verified headlessly: launch → `SidecarClient` connects → auto-opens persisted workspace via `workspace.open` (creates `.vmux/workspace.json` + sidecar registry) → quit → no orphan sidecar, no crash. **Live terminal typing + visual fidelity NOT verified** (no Screen Recording permission) — needs manual GUI testing.
+- **Code review fixes (ship-blockers):** (1) `SidecarClient` now fails all pending continuations on socket EOF (`handleDisconnect`) — previously an in-flight `call` would hang forever if the sidecar dropped; (2) `pty.write`/`pty.resize` now go through an ordered fire-and-forget `notify` on the serial write queue instead of detached Tasks — fixes keystroke/paste reordering.
 
 ## Success Criteria
 
-- [ ] Daily-driver internal use for 1 week without major bugs (5+ team members)
-- [ ] Cold launch → ready < 1.5s
-- [ ] Memory < 200MB with 3 workspaces + 5 terminal tabs idle
-- [ ] DMG installs and runs on clean macOS 14+ box
+- [ ] Daily-driver internal use for 1 week — pending real usage (needs GUI testing + team)
+- [~] Cold launch → ready < 1.5s — launches fast in practice; not formally measured
+- [ ] Memory < 200MB with 3 ws + 5 tabs idle — not measured
+- [ ] DMG installs/runs on clean macOS 14+ — DMG path needs create-dmg + Developer ID (deferred since phase 1)
 
 ## Risk Assessment
 

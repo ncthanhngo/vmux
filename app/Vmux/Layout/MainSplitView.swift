@@ -1,0 +1,106 @@
+import SwiftUI
+
+/// The v0.1 three-region shell: workspace sidebar | tabs+terminal | file tree,
+/// with a toolbar and bottom status bar. Assembled from the design system.
+struct MainSplitView: View {
+    @EnvironmentObject var app: AppState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HSplitView {
+                WorkspaceListView()
+                    .frame(minWidth: 200, idealWidth: 224, maxWidth: 320)
+                    .background(VibrancyView(.sidebar))
+
+                CenterArea()
+                    .frame(minWidth: 420)
+                    .layoutPriority(1)
+
+                if let ws = app.selectedWorkspace {
+                    FileTreeView(workspace: ws)
+                        .frame(minWidth: 220, idealWidth: 286, maxWidth: 380)
+                        .background(VibrancyView(.sidebar))
+                }
+            }
+            statusBar
+        }
+        .frame(minWidth: 1000, minHeight: 640)
+        .toolbar { toolbarContent }
+        .navigationTitle(app.selectedWorkspace?.meta.name ?? "vmux")
+    }
+
+    @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            if let ws = app.selectedWorkspace {
+                Text(ws.path).font(Typo.caption).foregroundStyle(Theme.label2)
+            }
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            StatusPill(title: "Watch mode")
+            ToolbarIconButton(glyph: "⚙︎")
+        }
+    }
+
+    private var statusBar: some View {
+        StatusBar {
+            if let ws = app.selectedWorkspace, ws.git.isRepo {
+                StatusItem(glyph: "⎇", value: ws.git.branch ?? "—")
+                if let n = ws.git.changes?.count, n > 0 { Text("\(n) modified") }
+            }
+            Spacer()
+            switch app.connection {
+            case .connecting: Text("connecting…")
+            case .connected: StatusItem(glyph: "🔗", value: "sidecar")
+            case .failed(let e): Text("sidecar error: \(e)").foregroundStyle(Theme.red)
+            }
+            Text("v0.1.0")
+        }
+    }
+}
+
+/// The center column: tab bar over the active terminal (or an empty state).
+private struct CenterArea: View {
+    @EnvironmentObject var app: AppState
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TabBarView()
+            ZStack {
+                Theme.window
+                content
+            }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        if app.selectedWorkspace == nil {
+            EmptyStateView(text: "Open a folder to start", systemImage: "folder.badge.plus")
+        } else if let tab = activeTab {
+            TerminalPaneView(session: tab.session)
+                .id(tab.id)
+                .padding(Space.paneGap)
+        } else {
+            EmptyStateView(text: "Press + to open a shell or agent", systemImage: "terminal")
+        }
+    }
+
+    private var activeTab: TabModel? {
+        guard let ws = app.selectedWorkspaceID, let sel = app.selectedTabID[ws] else { return nil }
+        return app.currentTabs.first { $0.id == sel }
+    }
+}
+
+private struct EmptyStateView: View {
+    let text: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(Theme.label3)
+            Text(text).font(Typo.body).foregroundStyle(Theme.label2)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
