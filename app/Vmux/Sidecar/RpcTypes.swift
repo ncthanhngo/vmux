@@ -191,5 +191,30 @@ struct ReplaySnapshot: Decodable {
     let consoleErrors: [String]?
 }
 
+// MARK: - Chrome import
+
+struct ChromeProfile: Decodable, Identifiable {
+    let name: String
+    let dir: String
+    let path: String
+    let hasCookies: Bool
+    let hasBookmarks: Bool
+    let hasHistory: Bool
+    var id: String { dir }
+}
+
+struct ChromeScanResult: Decodable {
+    let profiles: [ChromeProfile]?
+}
+
+struct ImportBookmarksParams: Encodable {
+    let workspaceId: String
+    let profileDir: String
+}
+
+struct ImportBookmarksResult: Decodable {
+    let imported: Int
+}
+
 /// Empty params for methods that take none.
 struct NoParams: Encodable {}

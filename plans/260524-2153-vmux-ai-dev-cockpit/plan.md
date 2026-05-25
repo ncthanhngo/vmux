@@ -45,7 +45,7 @@ Native macOS app for **autonomous AI dev sessions**: run agents (Claude Code, ..
 | 5 | [Native Swift shell + terminal pane [v0.1 ship]](./phase-05-native-swift-shell-terminal-pane.md) | Done |
 | 6 | [Browser session orchestration + screenshot preview [v0.2]](./phase-06-browser-session-orchestration-screenshot-preview.md) | Done |
 | 7 | [AI Activity + Approval + Session Replay [v1.0 moat]](./phase-07-ai-activity-approval-session-replay.md) | Done |
-| 8 | [Chrome import (cookies/bookmarks/history)](./phase-08-chrome-import-cookies-bookmarks-history.md) | Pending |
+| 8 | [Chrome import (cookies/bookmarks/history)](./phase-08-chrome-import-cookies-bookmarks-history.md) | Done |
 | 9 | [Markdown + Code viewer + Diff review + Splits + Notifications [v1.0]](./phase-09-markdown-code-viewer-diff-review.md) | Pending |
 | 10 | [External editor integration [v1.1]](./phase-10-external-editor-integration.md) | Pending |
 

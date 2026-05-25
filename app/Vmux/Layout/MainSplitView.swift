@@ -5,6 +5,7 @@ import SwiftUI
 struct MainSplitView: View {
     @EnvironmentObject var app: AppState
     @State private var replaySession: String?
+    @State private var showChromeImport = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +29,11 @@ struct MainSplitView: View {
         .frame(minWidth: 1000, minHeight: 640)
         .toolbar { toolbarContent }
         .navigationTitle(app.selectedWorkspace?.meta.name ?? "vmux")
+        .sheet(isPresented: $showChromeImport) {
+            if let ws = app.selectedWorkspace {
+                ChromeImportWizardView(client: app.client, workspaceID: ws.id) { showChromeImport = false }
+            }
+        }
     }
 
     private func rightSidebar(_ ws: WorkspaceDTO) -> some View {
@@ -65,6 +71,9 @@ struct MainSplitView: View {
         }
         ToolbarItemGroup(placement: .primaryAction) {
             StatusPill(title: "Watch mode")
+            if app.selectedWorkspace != nil {
+                Button("Import Chrome") { showChromeImport = true }
+            }
             ToolbarIconButton(glyph: "⚙︎")
         }
     }

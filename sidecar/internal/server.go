@@ -155,6 +155,8 @@ func (s *Service) registerMethods() {
 	s.RPC.Register("approval.mode", s.approvalMode)
 	s.RPC.Register("replay.timeline", s.replayTimeline)
 	s.RPC.Register("replay.at", s.replayAt)
+	s.RPC.Register("chromeImport.scan", s.chromeImportScan)
+	s.RPC.Register("chromeImport.importBookmarks", s.chromeImportBookmarks)
 }
 
 // --- PTY methods ---
