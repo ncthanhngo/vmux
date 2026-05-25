@@ -82,7 +82,7 @@ func TestProxyNativeAndUpstream(t *testing.T) {
 	}
 
 	act := &captureActivity{}
-	proxy := NewProxy(nil, act, NewNativeTools(reg, act, nil))
+	proxy := NewProxy(nil, act, NewNativeTools(reg, act, nil, nil))
 
 	// Spawn the fake upstream MCP server (real subprocess via the helper).
 	u, err := StartUpstream(context.Background(), UpstreamConfig{

@@ -6,6 +6,8 @@ struct MainSplitView: View {
     @EnvironmentObject var app: AppState
     @State private var replaySession: String?
     @State private var showChromeImport = false
+    @State private var showDiffReview = false
+    @State private var markdownFile: URL?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,28 +40,59 @@ struct MainSplitView: View {
 
     private func rightSidebar(_ ws: WorkspaceDTO) -> some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ActivityPanelView(model: app.activity, workspaceID: ws.id)
-                    if let session = app.activity.events.last?.sessionId {
-                        CapsuleButton(title: "Open Session Replay", style: .plain) {
-                            replaySession = session
-                        }
+            ScrollView { rightPanels(ws) }
+                .frame(maxHeight: .infinity)
+                .sheet(isPresented: $showDiffReview) {
+                    if let pending = app.diffReview.pending.first {
+                        DiffReviewView(model: app.diffReview, pending: pending)
+                            .frame(minWidth: 560, minHeight: 420)
                     }
-                    BrowserSessionsView(model: app.browser)
                 }
-                .padding(8)
-            }
-            .frame(maxHeight: .infinity)
             Divider()
-            FileTreeView(workspace: ws)
+            FileTreeView(workspace: ws, onOpenFile: openFile)
                 .frame(maxHeight: 280)
+                .sheet(item: markdownBinding) { item in
+                    MarkdownPaneView(fileURL: item.url).frame(minWidth: 560, minHeight: 480)
+                }
         }
-        .sheet(item: Binding(
-            get: { replaySession.map { ReplaySessionItem(id: $0) } },
-            set: { if $0 == nil { replaySession = nil } }
-        )) { item in
+        .sheet(item: replayBinding) { item in
             ReplayView(model: ReplayModel(client: app.client, sessionID: item.id), onClose: { replaySession = nil })
+        }
+    }
+
+    private var replayBinding: Binding<ReplaySessionItem?> {
+        Binding(get: { replaySession.map { ReplaySessionItem(id: $0) } },
+                set: { if $0 == nil { replaySession = nil } })
+    }
+
+    private var markdownBinding: Binding<MarkdownItem?> {
+        Binding(get: { markdownFile.map { MarkdownItem(url: $0) } },
+                set: { if $0 == nil { markdownFile = nil } })
+    }
+
+    @ViewBuilder private func rightPanels(_ ws: WorkspaceDTO) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ActivityPanelView(model: app.activity, workspaceID: ws.id)
+            if !app.diffReview.pending.isEmpty {
+                CapsuleButton(title: "Review \(app.diffReview.pending.count) file edit(s)", style: .filled) {
+                    showDiffReview = true
+                }
+            }
+            if let session = app.activity.events.last?.sessionId {
+                CapsuleButton(title: "Open Session Replay", style: .plain) {
+                    replaySession = session
+                }
+            }
+            BrowserSessionsView(model: app.browser)
+        }
+        .padding(8)
+    }
+
+    private func openFile(_ url: URL) {
+        if url.pathExtension.lowercased() == "md" {
+            markdownFile = url
+        } else {
+            NSWorkspace.shared.open(url)
         }
     }
 
@@ -142,6 +175,11 @@ private struct CenterArea: View {
 
 private struct ReplaySessionItem: Identifiable {
     let id: String
+}
+
+private struct MarkdownItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }
 
 private struct EmptyStateView: View {

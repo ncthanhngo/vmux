@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/vmux/sidecar/internal/approval"
 )
 
 // maxFileRead caps file_read output to avoid flooding an agent's context.
@@ -65,6 +67,18 @@ func (n *NativeTools) fileWriteTool() registeredTool {
 			if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 				return ErrorResult(err.Error()), nil
 			}
+
+			// In gate mode, stage the change for per-hunk review instead of
+			// writing directly — the user accepts/rejects via the diff UI.
+			if n.diff != nil && n.gate != nil && n.gate.Mode(p.WorkspaceID) == approval.ModeGate {
+				oldText, _ := os.ReadFile(abs) // missing file → empty (all-insert hunk)
+				if n.diff.Stage(abs, string(oldText), p.Content) {
+					return TextResult(fmt.Sprintf("staged %s for review", p.Path)), nil
+				}
+				// No change vs current content.
+				return TextResult("no changes to " + p.Path), nil
+			}
+
 			if err := os.WriteFile(abs, []byte(p.Content), 0o644); err != nil {
 				return ErrorResult(err.Error()), nil
 			}

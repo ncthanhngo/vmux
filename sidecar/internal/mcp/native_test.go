@@ -23,7 +23,7 @@ func newTestWorkspace(t *testing.T) (*NativeTools, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewNativeTools(reg, nil, nil), ws.ID
+	return NewNativeTools(reg, nil, nil, nil), ws.ID
 }
 
 // handlerFor returns the handler for a named native tool.
@@ -109,7 +109,7 @@ func TestWorkspaceOpenInvalid(t *testing.T) {
 func TestCloseUpstreamsIdempotent(t *testing.T) {
 	reg, _ := workspace.NewRegistry(nil, filepath.Join(t.TempDir(), "ws.json"))
 	defer reg.Shutdown()
-	p := NewProxy(nil, nil, NewNativeTools(reg, nil, nil))
+	p := NewProxy(nil, nil, NewNativeTools(reg, nil, nil, nil))
 	p.CloseUpstreams() // no upstreams — must not panic
 	p.CloseUpstreams()
 }

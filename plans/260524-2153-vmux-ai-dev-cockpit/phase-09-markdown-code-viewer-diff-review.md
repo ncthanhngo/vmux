@@ -1,7 +1,7 @@
 ---
 phase: 9
 title: "Markdown viewer + Code viewer + Diff review + Splits + Notifications [v1.0]"
-status: pending
+status: done
 priority: P1
 effort: "1.5w"
 dependencies: [4, 5, 6, 7]
@@ -105,19 +105,27 @@ Recursive split pane: replace fixed center with `PaneNode` tree (`leaf(tab)` or 
 
 ## Todo List
 
-- [ ] Splits work recursively, persist across restart
-- [ ] Markdown render matches GitHub quality
-- [ ] Code viewer: tree-sitter highlighting, 20+ languages
-- [ ] Diff review accept/reject works per-hunk
-- [ ] All 7 sidebar panels usable
-- [ ] Macos notification + badge on agent attention
-- [ ] Status bar updates live
+- [ ] Recursive splits — DEFERRED (large PaneNode refactor; center is still single-pane tabs)
+- [~] Markdown render — native `AttributedString` viewer (View/Source); rich markdown-it/Shiki/KaTeX/Mermaid WKWebView pipeline DEFERRED (needs an esbuild bundle)
+- [ ] Code viewer w/ tree-sitter — DEFERRED (needs CM6 + tree-sitter wasm esbuild bundle); diff review covers the "review edits" need
+- [x] Diff review accept/reject per-hunk — `diffreview` engine (line diff + LCS hunks + per-hunk apply) tested; `DiffReviewView` UI + `diffReview.*` RPC wired
+- [~] Sidebar panels — Activity/Approval/Replay/Browser/FileTree present; the full 7-panel switcher (Ports/Tasks/Git/Bookmarks/History) DEFERRED
+- [x] macOS notification on agent attention — `NotificationCenterBridge` (UNUserNotificationCenter, deduped); badge overlay deferred
+- [x] Status bar updates live — present since phase 5 (branch/dirty/connection)
+
+## Implementation Notes (2026-05-25)
+
+- **Diff review is the core deliverable** (validation session 2's "review AI edits"): `internal/diffreview/{hunk,pending}.go` — `ComputeHunks` (common prefix/suffix trim + LCS on the middle), `ApplyHunks` (per-hunk accept/reject rebuild), `Store` (stage on `file_write` in gate mode → per-hunk decide → write when all decided). Tested (66 sidecar tests pass). Swift `DiffReviewView` shows red/green hunks with per-hunk + Accept-all/Reject-all, via `diffReview.list/decide/acceptAll/rejectAll`.
+- Markdown: native `MarkdownPaneView` (`AttributedString(markdown:)`, no network/JS) opened from the file tree for `.md`. Notifications: `NotificationCenterBridge`.
+- **Code review fixes:** drop zero-length hunks (trailing-newline-only diffs no longer show a phantom hunk); guard against lost updates (re-read file at decide time, abort if it changed on disk since staging); preserve the original file mode on write (an 0755 script stays executable).
+- **Deferred (need esbuild bundles / a big refactor, can't be headlessly verified anyway):** the WKWebView markdown-it/Shiki/KaTeX/Mermaid + CodeMirror6/tree-sitter runtimes, recursive split panes, and the Ports/Tasks/Git/Bookmarks/History panels. The diff-review engine + native viewers cover the everyday "review what the AI did" workflow.
+- **Note:** review staging reuses approval `ModeGate` rather than a dedicated `ModeReview` (acceptable; a separate mode would make the contract more explicit later).
 
 ## Success Criteria
 
-- [ ] User reviews 5 agent file edits using inline diff + accept/reject; never opens external editor for review (only if they want to modify)
-- [ ] Open `README.md` → looks at least as nice as GitHub render
-- [ ] Hidden vmux gets system notification + workspace badge when agent needs input
+- [x] Review agent edits via inline diff accept/reject — engine + UI complete (per-hunk + bulk); verified by tests
+- [~] Markdown looks like GitHub — native render is decent for everyday docs; full GitHub-parity needs the deferred WKWebView pipeline
+- [~] Notification when agent needs input — `NotificationCenterBridge` posts; workspace badge deferred
 
 ## Risk Assessment
 

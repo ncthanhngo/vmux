@@ -11,6 +11,7 @@ import (
 	"github.com/vmux/sidecar/internal/activity"
 	"github.com/vmux/sidecar/internal/approval"
 	"github.com/vmux/sidecar/internal/browsersession"
+	"github.com/vmux/sidecar/internal/diffreview"
 	"github.com/vmux/sidecar/internal/mcp"
 	"github.com/vmux/sidecar/internal/pty"
 	"github.com/vmux/sidecar/internal/replay"
@@ -30,6 +31,7 @@ type Service struct {
 	Activity   *activity.Store
 	Gate       *approval.Gate
 	Replay     *replay.Replay
+	Diff       *diffreview.Store
 }
 
 // NewService builds the server, subsystems, and registers all methods.
@@ -48,7 +50,12 @@ func NewService(log *slog.Logger, workspaceStore, shotsDir, sessionsDir string) 
 		srv.Notify("approval.changed", map[string]any{"pending": redactPending(gate.Queue.List())})
 	})
 
-	native := mcp.NewNativeTools(wsReg, logger, gate)
+	diffStore := diffreview.NewStore()
+	diffStore.SetOnChange(func() {
+		srv.Notify("diffReview.changed", map[string]any{"pending": diffStore.List()})
+	})
+
+	native := mcp.NewNativeTools(wsReg, logger, gate, diffStore)
 	proxy := mcp.NewProxy(log, logger, native)
 
 	// A missing browser is non-fatal: the wizard surfaces install options and
@@ -65,6 +72,7 @@ func NewService(log *slog.Logger, workspaceStore, shotsDir, sessionsDir string) 
 		Activity: actStore,
 		Gate:     gate,
 		Replay:   replay.New(actStore),
+		Diff:     diffStore,
 	}
 
 	// Server-side port detection: surface localhost ports printed by dev servers.
@@ -157,6 +165,10 @@ func (s *Service) registerMethods() {
 	s.RPC.Register("replay.at", s.replayAt)
 	s.RPC.Register("chromeImport.scan", s.chromeImportScan)
 	s.RPC.Register("chromeImport.importBookmarks", s.chromeImportBookmarks)
+	s.RPC.Register("diffReview.list", s.diffReviewList)
+	s.RPC.Register("diffReview.decide", s.diffReviewDecide)
+	s.RPC.Register("diffReview.acceptAll", s.diffReviewAcceptAll)
+	s.RPC.Register("diffReview.rejectAll", s.diffReviewRejectAll)
 }
 
 // --- PTY methods ---

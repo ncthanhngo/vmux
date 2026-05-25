@@ -216,5 +216,34 @@ struct ImportBookmarksResult: Decodable {
     let imported: Int
 }
 
+// MARK: - Diff review
+
+struct DiffHunk: Decodable, Identifiable {
+    let id: Int
+    let oldStart: Int
+    let oldLines: [String]?
+    let newLines: [String]?
+}
+
+struct DiffPending: Decodable, Identifiable {
+    let path: String
+    let hunks: [DiffHunk]
+    var id: String { path }
+}
+
+struct DiffReviewChangedNote: Decodable {
+    let pending: [DiffPending]
+}
+
+struct DiffDecideParams: Encodable {
+    let path: String
+    let hunkId: Int
+    let accept: Bool
+}
+
+struct DiffPathParams: Encodable {
+    let path: String
+}
+
 /// Empty params for methods that take none.
 struct NoParams: Encodable {}
