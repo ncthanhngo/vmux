@@ -57,6 +57,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	// MCP proxy listens on a second socket; agents reach it via vmux-mcp-bridge.
+	mcpPath, err := paths.MCPSocketPath()
+	if err != nil {
+		log.Error("resolve mcp socket", "err", err)
+		os.Exit(1)
+	}
+	mcpLn, err := socket.ListenAt(mcpPath)
+	if err != nil {
+		log.Error("mcp socket listen failed", "err", err)
+		os.Exit(1)
+	}
+	defer mcpLn.Close()
+	log.Info("mcp proxy listening", "socket", mcpPath)
+
 	go watchdog.WatchParent(ctx, func() {
 		log.Info("parent process exited; shutting down")
 		cancel()
@@ -64,6 +78,11 @@ func main() {
 
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- svc.RPC.Serve(ctx, ln) }()
+	go func() {
+		if err := svc.MCP.Serve(ctx, mcpLn); err != nil {
+			log.Error("mcp serve error", "err", err)
+		}
+	}()
 
 	select {
 	case <-ctx.Done():

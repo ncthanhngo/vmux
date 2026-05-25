@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"log/slog"
 
+	"github.com/vmux/sidecar/internal/browsersession"
+	"github.com/vmux/sidecar/internal/mcp"
 	"github.com/vmux/sidecar/internal/pty"
 	"github.com/vmux/sidecar/internal/rpc"
 	"github.com/vmux/sidecar/internal/workspace"
@@ -18,6 +20,8 @@ type Service struct {
 	RPC        *rpc.Server
 	PTY        *pty.Manager
 	Workspaces *workspace.Registry
+	MCP        *mcp.Proxy
+	Browser    *browsersession.Manager
 }
 
 // NewService builds the server, subsystems, and registers all methods.
@@ -29,15 +33,32 @@ func NewService(log *slog.Logger, workspaceStore string) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Service{RPC: srv, PTY: ptyMgr, Workspaces: wsReg}
+
+	activity := mcp.NewSlogActivityLogger(log)
+	native := mcp.NewNativeTools(wsReg, activity)
+	proxy := mcp.NewProxy(log, activity, native)
+
+	// A missing browser is non-fatal: the wizard surfaces install options and
+	// the rest of vmux works without browser automation.
+	browser, berr := browsersession.NewManager()
+	if berr != nil {
+		log.Info("no browser detected for automation", "err", berr)
+	}
+
+	s := &Service{RPC: srv, PTY: ptyMgr, Workspaces: wsReg, MCP: proxy, Browser: browser}
 	s.registerMethods()
 	return s, nil
 }
 
-// Shutdown tears down subsystems (kill PTYs, stop watchers).
+// Shutdown tears down subsystems (kill PTYs, stop watchers, close upstream MCP
+// servers and browser instances).
 func (s *Service) Shutdown() {
 	s.PTY.KillAll()
 	s.Workspaces.Shutdown()
+	s.MCP.CloseUpstreams()
+	if s.Browser != nil {
+		s.Browser.StopAll()
+	}
 }
 
 func (s *Service) registerMethods() {

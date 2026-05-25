@@ -120,6 +120,17 @@ func (r *Registry) List() []Workspace {
 	return out
 }
 
+// Get returns a snapshot of the workspace with the given id.
+func (r *Registry) Get(wsID string) (Workspace, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	ws, ok := r.byID[wsID]
+	if !ok {
+		return Workspace{}, false
+	}
+	return *ws, true
+}
+
 // Close stops watching and forgets the workspace.
 func (r *Registry) Close(wsID string) error {
 	r.mu.Lock()

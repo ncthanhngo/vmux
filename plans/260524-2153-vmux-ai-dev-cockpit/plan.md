@@ -40,7 +40,7 @@ Native macOS app for **autonomous AI dev sessions**: run agents (Claude Code, ..
 |-------|------|--------|
 | 1 | [Project setup & build pipeline](./phase-01-project-setup-build-pipeline.md) | Done |
 | 2 | [Go sidecar foundation (IPC + PTY + workspace)](./phase-02-go-sidecar-foundation-ipc-pty-workspace.md) | Done |
-| 3 | [MCP proxy + auto-install external MCP servers (headless)](./phase-03-mcp-server-cdp-browser-wrapper-headless.md) | Pending |
+| 3 | [MCP proxy + auto-install external MCP servers (headless)](./phase-03-mcp-server-cdp-browser-wrapper-headless.md) | Done |
 | 4 | [Design system foundation (Apple HIG, SwiftUI)](./phase-04-design-system-foundation.md) | Pending |
 | 5 | [Native Swift shell + terminal pane [v0.1 ship]](./phase-05-native-swift-shell-terminal-pane.md) | Pending |
 | 6 | [Browser session orchestration + screenshot preview [v0.2]](./phase-06-browser-session-orchestration-screenshot-preview.md) | Pending |

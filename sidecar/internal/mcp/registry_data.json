@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "servers": [
+    {
+      "id": "chrome-devtools",
+      "name": "Chrome DevTools MCP",
+      "description": "Google official MCP server for controlling Chrome via the DevTools protocol. Primary browser automation server for vmux.",
+      "capabilities": ["browser", "network", "screenshot", "console"],
+      "runtime": "node",
+      "package": "chrome-devtools-mcp",
+      "version": "0.6.0",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@0.6.0"],
+      "recommended": true
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright MCP",
+      "description": "Microsoft Playwright MCP server. Alternative browser automation across Chromium/Firefox/WebKit.",
+      "capabilities": ["browser", "network", "screenshot"],
+      "runtime": "node",
+      "package": "@playwright/mcp",
+      "version": "0.0.41",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@0.0.41"],
+      "recommended": false
+    },
+    {
+      "id": "filesystem",
+      "name": "Filesystem MCP",
+      "description": "Reference filesystem MCP server (read/write within allowed roots).",
+      "capabilities": ["filesystem"],
+      "runtime": "node",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "version": "2025.8.21",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2025.8.21"],
+      "recommended": false
+    }
+  ]
+}

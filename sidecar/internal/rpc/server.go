@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net"
 	"sync"
+
+	"github.com/vmux/sidecar/internal/peercred"
 )
 
 // maxLine caps a single inbound JSON message (the socket is local + trusted, so
@@ -98,7 +100,7 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 			}
 			return err
 		}
-		if err := checkPeerUID(nc); err != nil {
+		if err := peercred.Check(nc); err != nil {
 			s.log.Warn("rejecting connection", "err", err)
 			nc.Close()
 			continue

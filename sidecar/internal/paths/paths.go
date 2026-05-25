@@ -26,6 +26,25 @@ func SocketPath() (string, error) {
 	return filepath.Join(dir, "sidecar.sock"), nil
 }
 
+// MCPSocketPath returns the Unix socket the MCP proxy exposes to agents
+// (via the vmux-mcp-bridge).
+func MCPSocketPath() (string, error) {
+	dir, err := AppSupportDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "mcp.sock"), nil
+}
+
+// MCPServersDir returns the directory where vmux installs managed MCP servers.
+func MCPServersDir() (string, error) {
+	dir, err := AppSupportDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "mcp-servers"), nil
+}
+
 // WorkspacesStore returns the persisted workspace-registry path.
 func WorkspacesStore() (string, error) {
 	dir, err := AppSupportDir()
