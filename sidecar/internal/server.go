@@ -1,0 +1,177 @@
+// Package internal wires the RPC server to the PTY and workspace subsystems and
+// registers the vmux method namespace.
+package internal
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"log/slog"
+
+	"github.com/vmux/sidecar/internal/pty"
+	"github.com/vmux/sidecar/internal/rpc"
+	"github.com/vmux/sidecar/internal/workspace"
+)
+
+// Service bundles the RPC server with its backing subsystems.
+type Service struct {
+	RPC        *rpc.Server
+	PTY        *pty.Manager
+	Workspaces *workspace.Registry
+}
+
+// NewService builds the server, subsystems, and registers all methods.
+// workspaceStore is the path to the persisted workspace registry.
+func NewService(log *slog.Logger, workspaceStore string) (*Service, error) {
+	srv := rpc.NewServer(log)
+	ptyMgr := pty.NewManager(srv)
+	wsReg, err := workspace.NewRegistry(srv, workspaceStore)
+	if err != nil {
+		return nil, err
+	}
+	s := &Service{RPC: srv, PTY: ptyMgr, Workspaces: wsReg}
+	s.registerMethods()
+	return s, nil
+}
+
+// Shutdown tears down subsystems (kill PTYs, stop watchers).
+func (s *Service) Shutdown() {
+	s.PTY.KillAll()
+	s.Workspaces.Shutdown()
+}
+
+func (s *Service) registerMethods() {
+	s.RPC.Register("pty.spawn", s.ptySpawn)
+	s.RPC.Register("pty.write", s.ptyWrite)
+	s.RPC.Register("pty.resize", s.ptyResize)
+	s.RPC.Register("pty.kill", s.ptyKill)
+	s.RPC.Register("pty.list", s.ptyList)
+	s.RPC.Register("workspace.open", s.workspaceOpen)
+	s.RPC.Register("workspace.list", s.workspaceList)
+	s.RPC.Register("workspace.close", s.workspaceClose)
+}
+
+// --- PTY methods ---
+
+type spawnParams struct {
+	Cwd  string   `json:"cwd"`
+	Cmd  string   `json:"cmd"`
+	Args []string `json:"args"`
+	Env  []string `json:"env"`
+}
+
+func (s *Service) ptySpawn(_ context.Context, raw json.RawMessage) (any, error) {
+	var p spawnParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	sid, err := s.PTY.Spawn(p.Cwd, p.Cmd, p.Args, p.Env)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"sessionId": sid}, nil
+}
+
+type writeParams struct {
+	SessionID string `json:"sessionId"`
+	Data      string `json:"data"` // base64
+}
+
+func (s *Service) ptyWrite(_ context.Context, raw json.RawMessage) (any, error) {
+	var p writeParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	data, err := base64.StdEncoding.DecodeString(p.Data)
+	if err != nil {
+		return nil, &rpc.Error{Code: rpc.CodeInvalidParams, Message: "data must be base64"}
+	}
+	if err := s.PTY.Write(p.SessionID, data); err != nil {
+		return nil, err
+	}
+	return struct{}{}, nil
+}
+
+type resizeParams struct {
+	SessionID string `json:"sessionId"`
+	Cols      uint16 `json:"cols"`
+	Rows      uint16 `json:"rows"`
+}
+
+func (s *Service) ptyResize(_ context.Context, raw json.RawMessage) (any, error) {
+	var p resizeParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	if err := s.PTY.Resize(p.SessionID, p.Cols, p.Rows); err != nil {
+		return nil, err
+	}
+	return struct{}{}, nil
+}
+
+type sessionIDParams struct {
+	SessionID string `json:"sessionId"`
+}
+
+func (s *Service) ptyKill(_ context.Context, raw json.RawMessage) (any, error) {
+	var p sessionIDParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	if err := s.PTY.Kill(p.SessionID); err != nil {
+		return nil, err
+	}
+	return struct{}{}, nil
+}
+
+func (s *Service) ptyList(_ context.Context, _ json.RawMessage) (any, error) {
+	return map[string][]string{"sessions": s.PTY.List()}, nil
+}
+
+// --- Workspace methods ---
+
+type openParams struct {
+	Path string `json:"path"`
+}
+
+func (s *Service) workspaceOpen(_ context.Context, raw json.RawMessage) (any, error) {
+	var p openParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	ws, err := s.Workspaces.Open(p.Path)
+	if err != nil {
+		return nil, err
+	}
+	return ws, nil
+}
+
+func (s *Service) workspaceList(_ context.Context, _ json.RawMessage) (any, error) {
+	return map[string]any{"workspaces": s.Workspaces.List()}, nil
+}
+
+type closeParams struct {
+	WorkspaceID string `json:"workspaceId"`
+}
+
+func (s *Service) workspaceClose(_ context.Context, raw json.RawMessage) (any, error) {
+	var p closeParams
+	if err := decode(raw, &p); err != nil {
+		return nil, err
+	}
+	if err := s.Workspaces.Close(p.WorkspaceID); err != nil {
+		return nil, err
+	}
+	return struct{}{}, nil
+}
+
+// decode unmarshals params, mapping JSON errors to a JSON-RPC InvalidParams.
+func decode(raw json.RawMessage, v any) error {
+	if len(raw) == 0 {
+		return nil // method takes no params
+	}
+	if err := json.Unmarshal(raw, v); err != nil {
+		return &rpc.Error{Code: rpc.CodeInvalidParams, Message: err.Error()}
+	}
+	return nil
+}

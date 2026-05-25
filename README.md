@@ -26,7 +26,7 @@ The Go sidecar is embedded in `Vmux.app/Contents/Resources/vmux-sidecar`. The ap
 
 - macOS 14.0+ (Sonoma)
 - Xcode 16+ (Swift 6)
-- Go 1.22+
+- Go 1.23+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `brew install xcodegen`
 - [create-dmg](https://github.com/create-dmg/create-dmg) — `brew install create-dmg` (only for `make dmg`)
 

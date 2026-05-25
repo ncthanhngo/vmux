@@ -1,21 +1,19 @@
 // Command vmux-sidecar is the Go backend that the vmux macOS app embeds and
-// launches. It listens on a user-only Unix socket for JSON-RPC traffic and
-// self-terminates if the app (its parent process) dies.
-//
-// Phase 1 scope: version banner, socket listener, parent-PID watchdog, clean
-// shutdown. JSON-RPC dispatch, PTY, and the MCP proxy arrive in later phases.
+// launches. It serves JSON-RPC over a user-only Unix socket — PTY sessions and
+// workspace tracking — and self-terminates if the app (its parent) dies.
 package main
 
 import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
-	"net"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/vmux/sidecar/internal"
+	"github.com/vmux/sidecar/internal/paths"
 	"github.com/vmux/sidecar/internal/socket"
 	"github.com/vmux/sidecar/internal/watchdog"
 )
@@ -32,29 +30,52 @@ func main() {
 		return
 	}
 
-	log.SetPrefix("[vmux-sidecar] ")
-	log.SetFlags(log.LstdFlags | log.Lmsgprefix)
-	log.Printf("vmux-sidecar v%s starting (pid=%d ppid=%d)", version, os.Getpid(), os.Getppid())
+	// Log to stderr; when launched by the app, stderr is redirected to
+	// ~/Library/Logs/vmux/sidecar.log.
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	log.Info("vmux-sidecar starting", "version", version, "pid", os.Getpid(), "ppid", os.Getppid())
 
 	ctx, cancel := signalContext()
 	defer cancel()
 
-	ln, path, err := socket.Listen()
+	ln, sockPath, err := socket.Listen()
 	if err != nil {
-		log.Fatalf("socket: %v", err)
+		log.Error("socket listen failed", "err", err)
+		os.Exit(1)
 	}
 	defer ln.Close()
-	log.Printf("listening on %s", path)
+	log.Info("listening", "socket", sockPath)
+
+	store, err := paths.WorkspacesStore()
+	if err != nil {
+		log.Error("resolve workspace store", "err", err)
+		os.Exit(1)
+	}
+	svc, err := internal.NewService(log, store)
+	if err != nil {
+		log.Error("service init failed", "err", err)
+		os.Exit(1)
+	}
 
 	go watchdog.WatchParent(ctx, func() {
-		log.Printf("parent process exited; shutting down")
+		log.Info("parent process exited; shutting down")
 		cancel()
 	})
 
-	go acceptLoop(ctx, ln)
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- svc.RPC.Serve(ctx, ln) }()
 
-	<-ctx.Done()
-	log.Printf("shutdown complete")
+	select {
+	case <-ctx.Done():
+	case err := <-serveErr:
+		if err != nil {
+			log.Error("serve error", "err", err)
+		}
+	}
+
+	log.Info("shutting down")
+	svc.Shutdown()
+	log.Info("shutdown complete")
 }
 
 // signalContext returns a context cancelled on SIGINT/SIGTERM.
@@ -67,25 +88,4 @@ func signalContext() (context.Context, context.CancelFunc) {
 		cancel()
 	}()
 	return ctx, cancel
-}
-
-// acceptLoop accepts connections until the context is cancelled. Phase 1 only
-// drains and closes connections; JSON-RPC dispatch lands in phase 2.
-func acceptLoop(ctx context.Context, ln net.Listener) {
-	go func() {
-		<-ctx.Done()
-		ln.Close() // unblock Accept on shutdown
-	}()
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			if ctx.Err() != nil {
-				return // expected during shutdown
-			}
-			log.Printf("accept: %v", err)
-			return
-		}
-		log.Printf("client connected")
-		conn.Close()
-	}
 }

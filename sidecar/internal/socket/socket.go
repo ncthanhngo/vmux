@@ -9,16 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/vmux/sidecar/internal/paths"
 )
 
 // Path returns the canonical Unix socket path:
 // ~/Library/Application Support/vmux/sidecar.sock
 func Path() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("resolve home dir: %w", err)
-	}
-	return filepath.Join(home, "Library", "Application Support", "vmux", "sidecar.sock"), nil
+	return paths.SocketPath()
 }
 
 // Listen creates a 0600 Unix listener at the canonical Path().
