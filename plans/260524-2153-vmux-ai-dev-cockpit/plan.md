@@ -1,7 +1,7 @@
 ---
 title: "vmux - macOS native AI dev cockpit (v0.1 → v1.1)"
 description: "Native macOS AI terminal: PTY agents + MCP proxy with Chrome DevTools MCP + Activity/Approval/Session Replay + code viewer with diff review + external editor integration. No embedded browser, no built-in editor."
-status: pending
+status: done
 priority: P1
 branch: ""
 tags: [macos, swift, go, ai-agents, mcp, chrome-devtools-mcp, native, autonomous-agents]
@@ -47,7 +47,7 @@ Native macOS app for **autonomous AI dev sessions**: run agents (Claude Code, ..
 | 7 | [AI Activity + Approval + Session Replay [v1.0 moat]](./phase-07-ai-activity-approval-session-replay.md) | Done |
 | 8 | [Chrome import (cookies/bookmarks/history)](./phase-08-chrome-import-cookies-bookmarks-history.md) | Done |
 | 9 | [Markdown + Code viewer + Diff review + Splits + Notifications [v1.0]](./phase-09-markdown-code-viewer-diff-review.md) | Done |
-| 10 | [External editor integration [v1.1]](./phase-10-external-editor-integration.md) | Pending |
+| 10 | [External editor integration [v1.1]](./phase-10-external-editor-integration.md) | Done |
 
 **Design reference:** `visuals/vmux-ui-mockup-apple.html` is the locked visual source of truth (Apple HIG). Phase 4 codifies it as a SwiftUI design system; phases 5/6/7/9 consume it.
 

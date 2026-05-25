@@ -49,7 +49,7 @@ struct MainSplitView: View {
                     }
                 }
             Divider()
-            FileTreeView(workspace: ws, onOpenFile: openFile)
+            FileTreeView(workspace: ws, onOpenFile: openFile, onOpenInEditor: { openInEditor($0, ws: ws) })
                 .frame(maxHeight: 280)
                 .sheet(item: markdownBinding) { item in
                     MarkdownPaneView(fileURL: item.url).frame(minWidth: 560, minHeight: 480)
@@ -94,6 +94,13 @@ struct MainSplitView: View {
         } else {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    private func openInEditor(_ url: URL, ws: WorkspaceDTO) {
+        let root = URL(fileURLWithPath: ws.path).standardizedFileURL.path
+        let full = url.standardizedFileURL.path
+        let rel = full.hasPrefix(root + "/") ? String(full.dropFirst(root.count + 1)) : url.lastPathComponent
+        app.editor.open(workspaceID: ws.id, path: rel)
     }
 
     @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {

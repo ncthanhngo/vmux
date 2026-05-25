@@ -1,0 +1,10 @@
+[
+  {"id": "vscode", "name": "VS Code", "bin": "code", "args": "-g {path}:{line}:{col}", "lineCol": true},
+  {"id": "cursor", "name": "Cursor", "bin": "cursor", "args": "-g {path}:{line}:{col}", "lineCol": true},
+  {"id": "zed", "name": "Zed", "bin": "zed", "args": "{path}:{line}:{col}", "lineCol": true},
+  {"id": "subl", "name": "Sublime Text", "bin": "subl", "args": "{path}:{line}:{col}", "lineCol": true},
+  {"id": "mvim", "name": "MacVim", "bin": "mvim", "args": "--remote-tab-silent +{line} {path}", "lineCol": true},
+  {"id": "nvim-terminal", "name": "nvim (terminal)", "bin": "nvim", "args": "+{line} {path}", "lineCol": true},
+  {"id": "idea", "name": "IntelliJ IDEA", "bin": "idea", "args": "--line {line} {path}", "lineCol": true},
+  {"id": "fallback-open", "name": "macOS default", "bin": "open", "args": "{path}", "lineCol": false}
+]

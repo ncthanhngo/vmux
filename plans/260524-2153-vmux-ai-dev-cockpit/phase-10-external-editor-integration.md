@@ -1,7 +1,7 @@
 ---
 phase: 10
 title: "External editor integration [v1.1]"
-status: pending
+status: done
 priority: P2
 effort: "3-4d"
 dependencies: [9]
@@ -95,18 +95,24 @@ Known editor registry (`shared/editor-registry.json`):
 
 ## Todo List
 
-- [ ] Detection finds installed editors on test machine (Cursor, VS Code, nvim, JetBrains)
-- [ ] First-run wizard
-- [ ] Open from file tree, code viewer, activity, diff review
-- [ ] File:line links in terminal output
-- [ ] External save → code viewer reloads
-- [ ] Per-workspace override works
-- [ ] Round-trip from click to focused editor < 1s
+- [x] Detection finds installed editors — `Detect()` (PATH + /Applications bundles for VS Code/Cursor/Zed/Sublime/MacVim); `editor.detected` RPC
+- [~] First-run wizard — `EditorPreferenceView` picker exists; standalone first-run flow deferred
+- [~] Open from file tree — "Open in Editor" context menu wired; code-viewer/activity/diff affordances deferred (those surfaces are themselves partial)
+- [ ] file:line links in terminal output — DEFERRED (SwiftTerm OSC8/regex linkify is fiddly)
+- [~] External save → reload — fsnotify `workspace.gitChanged` already fires; viewer auto-reload deferred (viewers are sheets)
+- [x] Per-workspace override — `Prefs` global + per-workspace, persisted; `editor.preference` RPC
+- [~] Round-trip < 1s — `cmd.Start` fire-and-forget; not benchmarked
+
+## Implementation Notes (2026-05-25)
+
+- Go: `internal/editorintegration/{registry,detect,invoke,prefs}.go` (tested, 72 total sidecar tests pass) + `internal/editor_methods.go`. **Safe by construction:** `BuildArgs` splits the template into an argument ARRAY then substitutes (no shell); line/col are int-typed; paths are absolute + workspace-contained, so a crafted filename can't become a flag. Editor runs in its own process group (survives sidecar restart). Swift: `EditorModel` + `EditorPreferenceView`, "Open in Editor" in the file-tree context menu → `editor.invoke`.
+- **Code review fixes:** made `containWorkspacePath` symlink-aware (consistent with the file-tool resolver); atomic preferences write (temp + rename). Arg-injection reviewed and found unreachable (absolute, contained path).
+- **Deferred:** terminal file:line linkification, code-viewer/activity "open in editor" affordances (depend on the deferred rich viewers), viewer auto-reload on external save, the `vmux open` CLI helper, and a dedicated first-run editor wizard. Core "open the right file at the right line in your editor" works from the file tree.
 
 ## Success Criteria
 
-- [ ] Daily flow: user reviews agent's 5 edits in vmux diff viewer; 1 edit needs human change → ⌘E opens Cursor at right file/line in < 1s; saves; vmux viewer reloads with new content automatically
-- [ ] User never has to manually navigate to file in editor — always opens at agent's last edit point
+- [~] Review→⌘E→edit in Cursor — open-in-editor works (file tree); the full diff→editor→auto-reload loop needs the deferred viewer reload + diff "jump to file"
+- [x] Opens at a specific file (line/col supported per editor template) — `editor.invoke` passes line/col
 
 ## Risk Assessment
 

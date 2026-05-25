@@ -45,6 +45,15 @@ func MCPServersDir() (string, error) {
 	return filepath.Join(dir, "mcp-servers"), nil
 }
 
+// PreferencesFile returns the path to the user preferences file.
+func PreferencesFile() (string, error) {
+	dir, err := AppSupportDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "preferences.json"), nil
+}
+
 // SessionsDir returns the directory where per-session activity logs are stored.
 func SessionsDir() (string, error) {
 	dir, err := AppSupportDir()

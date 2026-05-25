@@ -12,6 +12,7 @@ import (
 	"github.com/vmux/sidecar/internal/approval"
 	"github.com/vmux/sidecar/internal/browsersession"
 	"github.com/vmux/sidecar/internal/diffreview"
+	"github.com/vmux/sidecar/internal/editorintegration"
 	"github.com/vmux/sidecar/internal/mcp"
 	"github.com/vmux/sidecar/internal/pty"
 	"github.com/vmux/sidecar/internal/replay"
@@ -32,10 +33,11 @@ type Service struct {
 	Gate       *approval.Gate
 	Replay     *replay.Replay
 	Diff       *diffreview.Store
+	EditorPrefs *editorintegration.Prefs
 }
 
 // NewService builds the server, subsystems, and registers all methods.
-func NewService(log *slog.Logger, workspaceStore, shotsDir, sessionsDir string) (*Service, error) {
+func NewService(log *slog.Logger, workspaceStore, shotsDir, sessionsDir, prefsFile string) (*Service, error) {
 	srv := rpc.NewServer(log)
 	ptyMgr := pty.NewManager(srv)
 	wsReg, err := workspace.NewRegistry(srv, workspaceStore)
@@ -69,10 +71,11 @@ func NewService(log *slog.Logger, workspaceStore, shotsDir, sessionsDir string) 
 		RPC: srv, PTY: ptyMgr, Workspaces: wsReg, MCP: proxy, Browser: browser,
 		Shots:    browsersession.NewScreenshotStore(shotsDir),
 		Ports:    browsersession.NewPortDetector(),
-		Activity: actStore,
-		Gate:     gate,
-		Replay:   replay.New(actStore),
-		Diff:     diffStore,
+		Activity:    actStore,
+		Gate:        gate,
+		Replay:      replay.New(actStore),
+		Diff:        diffStore,
+		EditorPrefs: editorintegration.LoadPrefs(prefsFile),
 	}
 
 	// Server-side port detection: surface localhost ports printed by dev servers.
@@ -169,6 +172,9 @@ func (s *Service) registerMethods() {
 	s.RPC.Register("diffReview.decide", s.diffReviewDecide)
 	s.RPC.Register("diffReview.acceptAll", s.diffReviewAcceptAll)
 	s.RPC.Register("diffReview.rejectAll", s.diffReviewRejectAll)
+	s.RPC.Register("editor.detected", s.editorDetected)
+	s.RPC.Register("editor.invoke", s.editorInvoke)
+	s.RPC.Register("editor.preference", s.editorPreference)
 }
 
 // --- PTY methods ---

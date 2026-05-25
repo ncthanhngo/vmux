@@ -245,5 +245,30 @@ struct DiffPathParams: Encodable {
     let path: String
 }
 
+// MARK: - Editor integration
+
+struct DetectedEditor: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let resolvedBin: String
+}
+
+struct EditorDetectedResult: Decodable {
+    let editors: [DetectedEditor]?
+}
+
+struct EditorInvokeParams: Encodable {
+    let workspaceId: String
+    let path: String
+    let line: Int
+    let col: Int
+    let editorId: String?
+}
+
+struct EditorPreferenceParams: Encodable {
+    let workspaceId: String
+    let editorId: String
+}
+
 /// Empty params for methods that take none.
 struct NoParams: Encodable {}

@@ -35,6 +35,7 @@ final class AppState: ObservableObject {
     lazy var browser = BrowserSessionModel(client: client)
     lazy var activity = ActivityModel(client: client)
     lazy var diffReview = DiffReviewModel(client: client)
+    lazy var editor = EditorModel(client: client)
     private var gitCancellable: AnyCancellable?
 
     private let persistedPathsKey = "vmux.workspacePaths"
@@ -59,6 +60,7 @@ final class AppState: ObservableObject {
             activity.subscribe()
             diffReview.subscribe()
             NotificationCenterBridge.shared.requestAuthorization()
+            await editor.detect()
             await restoreWorkspaces()
         } catch {
             connection = .failed("\(error)")

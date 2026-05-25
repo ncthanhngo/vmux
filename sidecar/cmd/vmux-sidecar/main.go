@@ -61,7 +61,12 @@ func main() {
 		log.Error("resolve sessions dir", "err", err)
 		os.Exit(1)
 	}
-	svc, err := internal.NewService(log, store, shotsDir, sessionsDir)
+	prefsFile, err := paths.PreferencesFile()
+	if err != nil {
+		log.Error("resolve preferences file", "err", err)
+		os.Exit(1)
+	}
+	svc, err := internal.NewService(log, store, shotsDir, sessionsDir, prefsFile)
 	if err != nil {
 		log.Error("service init failed", "err", err)
 		os.Exit(1)

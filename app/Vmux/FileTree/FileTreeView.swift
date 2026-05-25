@@ -6,13 +6,17 @@ import SwiftUI
 struct FileTreeView: View {
     let workspace: WorkspaceDTO
     var onOpenFile: (URL) -> Void = { NSWorkspace.shared.open($0) }
+    var onOpenInEditor: (URL) -> Void = { NSWorkspace.shared.open($0) }
 
     @StateObject private var root: FileNode
     private let badges: GitBadges
 
-    init(workspace: WorkspaceDTO, onOpenFile: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }) {
+    init(workspace: WorkspaceDTO,
+         onOpenFile: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) },
+         onOpenInEditor: @escaping (URL) -> Void = { NSWorkspace.shared.open($0) }) {
         self.workspace = workspace
         self.onOpenFile = onOpenFile
+        self.onOpenInEditor = onOpenInEditor
         let url = URL(fileURLWithPath: workspace.path)
         _root = StateObject(wrappedValue: FileNode(url: url, isDirectory: true))
         self.badges = GitBadges(workspaceRoot: url, status: workspace.git)
@@ -21,7 +25,8 @@ struct FileTreeView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                FileNodeRows(node: root, depth: 0, badges: badges, isRoot: true, onOpenFile: onOpenFile)
+                FileNodeRows(node: root, depth: 0, badges: badges, isRoot: true,
+                             onOpenFile: onOpenFile, onOpenInEditor: onOpenInEditor)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
@@ -37,17 +42,18 @@ private struct FileNodeRows: View {
     let badges: GitBadges
     var isRoot = false
     let onOpenFile: (URL) -> Void
+    let onOpenInEditor: (URL) -> Void
 
     var body: some View {
         if isRoot {
             ForEach(node.children ?? []) { child in
-                FileNodeRows(node: child, depth: depth, badges: badges, onOpenFile: onOpenFile)
+                FileNodeRows(node: child, depth: depth, badges: badges, onOpenFile: onOpenFile, onOpenInEditor: onOpenInEditor)
             }
         } else {
-            FileRow(node: node, depth: depth, modified: badges.isModified(node.url), onOpenFile: onOpenFile)
+            FileRow(node: node, depth: depth, modified: badges.isModified(node.url), onOpenFile: onOpenFile, onOpenInEditor: onOpenInEditor)
             if node.isExpanded {
                 ForEach(node.children ?? []) { child in
-                    FileNodeRows(node: child, depth: depth + 1, badges: badges, onOpenFile: onOpenFile)
+                    FileNodeRows(node: child, depth: depth + 1, badges: badges, onOpenFile: onOpenFile, onOpenInEditor: onOpenInEditor)
                 }
             }
         }
@@ -59,6 +65,7 @@ private struct FileRow: View {
     let depth: Int
     let modified: Bool
     let onOpenFile: (URL) -> Void
+    let onOpenInEditor: (URL) -> Void
 
     var body: some View {
         HStack(spacing: 5) {
@@ -82,6 +89,9 @@ private struct FileRow: View {
             if node.isDirectory { node.toggle() } else { onOpenFile(node.url) }
         }
         .contextMenu {
+            if !node.isDirectory {
+                Button("Open in Editor") { onOpenInEditor(node.url) }
+            }
             Button("Reveal in Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([node.url])
             }
