@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"time"
 )
@@ -33,6 +34,7 @@ func (p *Proxy) callTool(ctx context.Context, params json.RawMessage) (any, erro
 		if err != nil {
 			return nil, err
 		}
+		p.captureScreenshots(u.Name, res)
 		return res, nil
 	}
 
@@ -51,6 +53,21 @@ func (p *Proxy) ownerOf(toolName string) *Upstream {
 		}
 	}
 	return nil
+}
+
+// captureScreenshots forwards any image content in a tool result to the
+// OnScreenshot hook (so the screenshot store can persist browser captures).
+func (p *Proxy) captureScreenshots(upstream string, res CallToolResult) {
+	if p.OnScreenshot == nil {
+		return
+	}
+	for _, c := range res.Content {
+		if c.Type == "image" && c.Data != "" {
+			if raw, err := base64.StdEncoding.DecodeString(c.Data); err == nil {
+				p.OnScreenshot(upstream, raw)
+			}
+		}
+	}
 }
 
 func (p *Proxy) finishLog(rec ToolCallRecord, res CallToolResult, err error, start time.Time) {

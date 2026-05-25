@@ -38,12 +38,14 @@ type Session struct {
 
 	emitter Emitter
 	onExit  func(id string)
+	tap     func(sessionID string, data []byte)
 	once    sync.Once
 }
 
 // startSession launches name+args under a PTY in cwd with env, then begins
-// pumping its output. onExit fires once after the process exits.
-func startSession(id, cwd, name string, args, env []string, em Emitter, onExit func(string)) (*Session, error) {
+// pumping its output. onExit fires once after the process exits. tap, if set,
+// observes raw output (used for server-side port detection).
+func startSession(id, cwd, name string, args, env []string, em Emitter, onExit func(string), tap func(string, []byte)) (*Session, error) {
 	cmd := exec.Command(name, args...)
 	cmd.Dir = cwd
 	cmd.Env = buildEnv(env)
@@ -56,7 +58,7 @@ func startSession(id, cwd, name string, args, env []string, em Emitter, onExit f
 		return nil, err
 	}
 
-	s := &Session{ID: id, cmd: cmd, pty: ptmx, emitter: em, onExit: onExit}
+	s := &Session{ID: id, cmd: cmd, pty: ptmx, emitter: em, onExit: onExit, tap: tap}
 	go s.readPump()
 	return s, nil
 }
@@ -66,6 +68,9 @@ func (s *Session) readPump() {
 	for {
 		n, err := s.pty.Read(buf)
 		if n > 0 {
+			if s.tap != nil {
+				s.tap(s.ID, buf[:n])
+			}
 			s.emitter.Notify("pty.data", dataParams{
 				SessionID: s.ID,
 				Chunk:     base64.StdEncoding.EncodeToString(buf[:n]),

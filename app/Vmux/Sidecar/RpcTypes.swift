@@ -83,5 +83,35 @@ struct GitChangedNote: Decodable {
     let status: GitStatus
 }
 
+// MARK: - Browser sessions
+
+/// `browserSession.shotCaptured` notification (base64 PNG thumbnail).
+struct ShotCapturedNote: Decodable {
+    let sessionId: String
+    let shotId: String
+    let thumbnail: String
+}
+
+/// `browserSession.portDetected` notification.
+struct PortDetectedNote: Decodable {
+    let sessionId: String
+    let port: Int
+}
+
+struct LatestShotParams: Encodable {
+    let sessionId: String
+}
+
+struct LatestShotResult: Decodable {
+    let shotId: String
+    let width: Int
+    let height: Int
+    let png: String // base64
+}
+
+struct BrowserSessionParams: Encodable {
+    let sessionId: String
+}
+
 /// Empty params for methods that take none.
 struct NoParams: Encodable {}

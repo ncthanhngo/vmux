@@ -21,6 +21,10 @@ type Proxy struct {
 	nativeByName map[string]ToolHandler
 	nativeTools  []Tool
 
+	// OnScreenshot, if set, is invoked with decoded PNG bytes whenever an
+	// upstream tool result carries an image (browser screenshot capture).
+	OnScreenshot func(upstream string, png []byte)
+
 	mu        sync.RWMutex
 	upstreams map[string]*Upstream
 }

@@ -32,6 +32,7 @@ final class AppState: ObservableObject {
     @Published var selectedTabID: [String: UUID] = [:]
 
     let client = SidecarClient()
+    lazy var browser = BrowserSessionModel(client: client)
     private var gitCancellable: AnyCancellable?
 
     private let persistedPathsKey = "vmux.workspacePaths"
@@ -52,6 +53,7 @@ final class AppState: ObservableObject {
             try await client.connect()
             connection = .connected
             subscribeGitChanges()
+            browser.subscribe()
             await restoreWorkspaces()
         } catch {
             connection = .failed("\(error)")

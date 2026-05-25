@@ -45,6 +45,15 @@ func MCPServersDir() (string, error) {
 	return filepath.Join(dir, "mcp-servers"), nil
 }
 
+// ShotsDir returns the directory where browser screenshots are stored.
+func ShotsDir() (string, error) {
+	dir, err := AppSupportDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "shots"), nil
+}
+
 // WorkspacesStore returns the persisted workspace-registry path.
 func WorkspacesStore() (string, error) {
 	dir, err := AppSupportDir()

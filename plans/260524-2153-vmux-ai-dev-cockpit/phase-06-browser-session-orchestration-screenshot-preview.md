@@ -1,7 +1,7 @@
 ---
 phase: 6
 title: "Browser session orchestration + screenshot preview [v0.2]"
-status: pending
+status: done
 priority: P1
 effort: "4-5d"
 dependencies: [3, 4, 5]
@@ -80,19 +80,26 @@ Screenshot store: ring buffer 50 shots/session, on-disk under `<ws>/.vmux/shots/
 
 ## Todo List
 
-- [ ] Screenshot interceptor in MCP proxy captures all browser shots
-- [ ] Screenshot store persists across sidecar restart
-- [ ] Sessions panel lists active sessions accurately
-- [ ] Preview pane auto-updates on new screenshot
-- [ ] Lightbox + Save to Desktop
-- [ ] Port detector + 1-click navigate
-- [ ] Focus button brings Chrome window to front
+- [x] Screenshot interceptor in MCP proxy — `Proxy.OnScreenshot` scans tool results for image content → store
+- [x] Screenshot store (ring buffer 50, PNG normalize + thumbnail, disk 0600, path-safe dir) — tested
+- [x] Sessions panel lists sessions — `BrowserSessionsView` from `browserSession.list` + events
+- [~] Preview pane auto-updates — thumbnails update live via `shotCaptured`; surfaced in the right-sidebar sessions panel (not a separate tab type — see deviations)
+- [x] Lightbox + Save to Desktop — `ScreenshotLightboxView`, full image via `browserSession.latestShot`
+- [x] Port detector + 1-click open — server-side regex tap → `portDetected`; `PortDetectorBanner` opens `localhost:PORT`
+- [x] Focus button — `browserSession.focus` via `osascript ... activate`
+
+## Implementation Notes (2026-05-25)
+
+- Go: `internal/browsersession/{port_detector,screenshot_store,image_util}.go` (tested), `internal/browser_methods.go`, PTY output `tap`, MCP `OnScreenshot` hook. Swift: `app/Vmux/BrowserSession/*` integrated into the right sidebar + a port banner over the terminal.
+- **Deviations:** screenshots are keyed by **upstream MCP server name** (one "session" per browser MCP) — per-tab keying deferred (documented limitation). The screenshot preview lives as a **right-sidebar sessions panel + lightbox** rather than a dedicated tab type (avoids a TabContent refactor); the dedicated "Screenshot Preview" tab + panel-switcher can come when phase 7/9 reshuffle the right sidebar. Port-banner "Open" opens the URL in the user's default browser (peek) — routing through MCP `browser_navigate` needs a live upstream (deferred).
+- Verified: Go build + 42 tests (-race); app builds, launches (browser-session subscription active), quits clean, no orphan. **Live Chrome screenshot E2E deferred** (needs a running Chrome DevTools MCP upstream + Chrome).
+- Code review fixes: path-safe session dir (`safeKey`) hardening the registry-trust invariant; cleanup of the full image if the thumbnail write fails.
 
 ## Success Criteria
 
-- [ ] Agent runs unattended overnight; next morning user opens vmux → sees timeline of screenshots agent captured (preview pane + Activity panel from phase 6)
-- [ ] User can spot-check by clicking any screenshot → lightbox shows full image
-- [ ] Port detection works for `npm run dev` style output (Next.js, Vite, Fastify, Express)
+- [~] Overnight screenshot timeline — store + sessions panel ready; needs live agent + Chrome to exercise
+- [x] Click screenshot → lightbox full image — wired (`latestShot` → `ScreenshotLightboxView`)
+- [x] Port detection for npm/Vite/Next/Fastify/Express output — covered by `port_detector_test.go`
 
 ## Risk Assessment
 

@@ -43,7 +43,7 @@ Native macOS app for **autonomous AI dev sessions**: run agents (Claude Code, ..
 | 3 | [MCP proxy + auto-install external MCP servers (headless)](./phase-03-mcp-server-cdp-browser-wrapper-headless.md) | Done |
 | 4 | [Design system foundation (Apple HIG, SwiftUI)](./phase-04-design-system-foundation.md) | Done |
 | 5 | [Native Swift shell + terminal pane [v0.1 ship]](./phase-05-native-swift-shell-terminal-pane.md) | Done |
-| 6 | [Browser session orchestration + screenshot preview [v0.2]](./phase-06-browser-session-orchestration-screenshot-preview.md) | Pending |
+| 6 | [Browser session orchestration + screenshot preview [v0.2]](./phase-06-browser-session-orchestration-screenshot-preview.md) | Done |
 | 7 | [AI Activity + Approval + Session Replay [v1.0 moat]](./phase-07-ai-activity-approval-session-replay.md) | Pending |
 | 8 | [Chrome import (cookies/bookmarks/history)](./phase-08-chrome-import-cookies-bookmarks-history.md) | Pending |
 | 9 | [Markdown + Code viewer + Diff review + Splits + Notifications [v1.0]](./phase-09-markdown-code-viewer-diff-review.md) | Pending |

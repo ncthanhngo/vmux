@@ -14,11 +14,18 @@ type Manager struct {
 
 	mu       sync.Mutex
 	sessions map[string]*Session
+	tap      func(sessionID string, data []byte)
 }
 
 // NewManager returns a Manager that emits pty.* notifications via em.
 func NewManager(em Emitter) *Manager {
 	return &Manager{emitter: em, sessions: make(map[string]*Session)}
+}
+
+// SetOutputTap installs a callback that observes raw output of every session
+// (used for server-side port detection). Set once at startup.
+func (m *Manager) SetOutputTap(fn func(sessionID string, data []byte)) {
+	m.tap = fn
 }
 
 // Spawn launches name+args under a PTY in cwd and returns the session id.
@@ -27,7 +34,7 @@ func (m *Manager) Spawn(cwd, name string, args, env []string) (string, error) {
 		return "", fmt.Errorf("pty: empty command")
 	}
 	sid := id.New()
-	s, err := startSession(sid, cwd, name, args, env, m.emitter, m.remove)
+	s, err := startSession(sid, cwd, name, args, env, m.emitter, m.remove, m.tap)
 	if err != nil {
 		return "", err
 	}

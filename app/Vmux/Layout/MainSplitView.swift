@@ -12,12 +12,12 @@ struct MainSplitView: View {
                     .frame(minWidth: 200, idealWidth: 224, maxWidth: 320)
                     .background(VibrancyView(.sidebar))
 
-                CenterArea()
+                CenterArea(browser: app.browser)
                     .frame(minWidth: 420)
                     .layoutPriority(1)
 
                 if let ws = app.selectedWorkspace {
-                    FileTreeView(workspace: ws)
+                    rightSidebar(ws)
                         .frame(minWidth: 220, idealWidth: 286, maxWidth: 380)
                         .background(VibrancyView(.sidebar))
                 }
@@ -27,6 +27,18 @@ struct MainSplitView: View {
         .frame(minWidth: 1000, minHeight: 640)
         .toolbar { toolbarContent }
         .navigationTitle(app.selectedWorkspace?.meta.name ?? "vmux")
+    }
+
+    private func rightSidebar(_ ws: WorkspaceDTO) -> some View {
+        VStack(spacing: 0) {
+            FileTreeView(workspace: ws)
+                .frame(maxHeight: .infinity)
+            Divider()
+            ScrollView {
+                BrowserSessionsView(model: app.browser).padding(8)
+            }
+            .frame(maxHeight: 300)
+        }
     }
 
     @ToolbarContentBuilder private var toolbarContent: some ToolbarContent {
@@ -58,16 +70,29 @@ struct MainSplitView: View {
     }
 }
 
-/// The center column: tab bar over the active terminal (or an empty state).
+/// The center column: tab bar over the active terminal (or an empty state),
+/// with a port-detected banner when the active session prints a localhost port.
 private struct CenterArea: View {
     @EnvironmentObject var app: AppState
+    @ObservedObject var browser: BrowserSessionModel
 
     var body: some View {
         VStack(spacing: 0) {
             TabBarView()
-            ZStack {
+            ZStack(alignment: .top) {
                 Theme.window
                 content
+                if let tab = activeTab, let sid = tab.session.sessionId,
+                   let port = browser.detectedPorts[sid]?.first {
+                    PortDetectorBanner(
+                        port: port,
+                        onOpen: {
+                            if let url = URL(string: "http://localhost:\(port)") { NSWorkspace.shared.open(url) }
+                            browser.dismissPort(sessionID: sid, port: port)
+                        },
+                        onDismiss: { browser.dismissPort(sessionID: sid, port: port) }
+                    )
+                }
             }
         }
     }

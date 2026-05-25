@@ -51,7 +51,12 @@ func main() {
 		log.Error("resolve workspace store", "err", err)
 		os.Exit(1)
 	}
-	svc, err := internal.NewService(log, store)
+	shotsDir, err := paths.ShotsDir()
+	if err != nil {
+		log.Error("resolve shots dir", "err", err)
+		os.Exit(1)
+	}
+	svc, err := internal.NewService(log, store, shotsDir)
 	if err != nil {
 		log.Error("service init failed", "err", err)
 		os.Exit(1)

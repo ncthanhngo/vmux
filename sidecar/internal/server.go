@@ -22,11 +22,14 @@ type Service struct {
 	Workspaces *workspace.Registry
 	MCP        *mcp.Proxy
 	Browser    *browsersession.Manager
+	Shots      *browsersession.ScreenshotStore
+	Ports      *browsersession.PortDetector
 }
 
 // NewService builds the server, subsystems, and registers all methods.
-// workspaceStore is the path to the persisted workspace registry.
-func NewService(log *slog.Logger, workspaceStore string) (*Service, error) {
+// workspaceStore is the path to the persisted workspace registry; shotsDir is
+// where browser screenshots are stored.
+func NewService(log *slog.Logger, workspaceStore, shotsDir string) (*Service, error) {
 	srv := rpc.NewServer(log)
 	ptyMgr := pty.NewManager(srv)
 	wsReg, err := workspace.NewRegistry(srv, workspaceStore)
@@ -45,7 +48,31 @@ func NewService(log *slog.Logger, workspaceStore string) (*Service, error) {
 		log.Info("no browser detected for automation", "err", berr)
 	}
 
-	s := &Service{RPC: srv, PTY: ptyMgr, Workspaces: wsReg, MCP: proxy, Browser: browser}
+	s := &Service{
+		RPC: srv, PTY: ptyMgr, Workspaces: wsReg, MCP: proxy, Browser: browser,
+		Shots: browsersession.NewScreenshotStore(shotsDir),
+		Ports: browsersession.NewPortDetector(),
+	}
+
+	// Server-side port detection: surface localhost ports printed by dev servers.
+	ptyMgr.SetOutputTap(func(sessionID string, data []byte) {
+		for _, port := range s.Ports.Scan(sessionID, string(data)) {
+			srv.Notify("browserSession.portDetected", map[string]any{"sessionId": sessionID, "port": port})
+		}
+	})
+
+	// Persist browser screenshots returned via MCP and notify the UI.
+	proxy.OnScreenshot = func(upstream string, png []byte) {
+		shot, thumb, err := s.Shots.Add(upstream, png)
+		if err != nil {
+			log.Error("store screenshot", "upstream", upstream, "err", err)
+			return
+		}
+		srv.Notify("browserSession.shotCaptured", map[string]any{
+			"sessionId": upstream, "shotId": shot.ID, "thumbnail": thumb,
+		})
+	}
+
 	s.registerMethods()
 	return s, nil
 }
@@ -70,6 +97,10 @@ func (s *Service) registerMethods() {
 	s.RPC.Register("workspace.open", s.workspaceOpen)
 	s.RPC.Register("workspace.list", s.workspaceList)
 	s.RPC.Register("workspace.close", s.workspaceClose)
+	s.RPC.Register("browserSession.list", s.browserList)
+	s.RPC.Register("browserSession.latestShot", s.browserLatestShot)
+	s.RPC.Register("browserSession.close", s.browserClose)
+	s.RPC.Register("browserSession.focus", s.browserFocus)
 }
 
 // --- PTY methods ---
