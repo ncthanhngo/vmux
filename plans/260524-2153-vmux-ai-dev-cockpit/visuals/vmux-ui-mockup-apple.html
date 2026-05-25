@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<title>vmux — Apple-style mockup</title>
+<style>
+  /* ===== macOS semantic tokens ===== */
+  [data-theme="dark"] {
+    --desktop: #2a2a2c;
+    --window: #1e1e20;
+    --content: #1c1c1e;
+    --sidebar: rgba(40,40,43,.72);
+    --sidebar-solid: #28282b;
+    --titlebar: rgba(48,48,51,.6);
+    --panel: rgba(44,44,47,.7);
+    --card: rgba(255,255,255,.05);
+    --card-hover: rgba(255,255,255,.08);
+    --sel: var(--accent);
+    --sep: rgba(255,255,255,.09);
+    --sep-strong: rgba(255,255,255,.14);
+    --label: rgba(255,255,255,.92);
+    --label-2: rgba(255,255,255,.55);
+    --label-3: rgba(255,255,255,.32);
+    --accent: #0A84FF;
+    --accent-fill: #0A84FF;
+    --green: #30D158;
+    --red: #FF453A;
+    --orange: #FF9F0A;
+    --yellow: #FFD60A;
+    --purple: #BF5AF2;
+    --teal: #64D2FF;
+    --pink: #FF6482;
+    --code-bg: #161618;
+    --diff-add-bg: rgba(48,209,88,.12);
+    --diff-del-bg: rgba(255,69,58,.12);
+    --term-bg: #161618;
+    --shadow: rgba(0,0,0,.55);
+    --shot-frame: #000;
+  }
+  [data-theme="light"] {
+    --desktop: #d6d6d8;
+    --window: #ececee;
+    --content: #ffffff;
+    --sidebar: rgba(246,246,248,.78);
+    --sidebar-solid: #f3f3f5;
+    --titlebar: rgba(236,236,238,.7);
+    --panel: rgba(245,245,247,.8);
+    --card: rgba(0,0,0,.025);
+    --card-hover: rgba(0,0,0,.05);
+    --sel: var(--accent);
+    --sep: rgba(0,0,0,.08);
+    --sep-strong: rgba(0,0,0,.13);
+    --label: rgba(0,0,0,.9);
+    --label-2: rgba(0,0,0,.5);
+    --label-3: rgba(0,0,0,.28);
+    --accent: #007AFF;
+    --accent-fill: #007AFF;
+    --green: #34C759;
+    --red: #FF3B30;
+    --orange: #FF9500;
+    --yellow: #E6B800;
+    --purple: #AF52DE;
+    --teal: #00C7BE;
+    --pink: #FF2D55;
+    --code-bg: #1c1c1e;
+    --diff-add-bg: #e7fbef;
+    --diff-del-bg: #ffeef0;
+    --term-bg: #1c1c1e;
+    --shadow: rgba(0,0,0,.22);
+    --shot-frame: #d6d6d8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent),
+      var(--desktop);
+    color: var(--label);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    transition: background .3s ease;
+  }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 22px; gap: 14px; }
+
+  .theme-toggle {
+    position: fixed; top: 18px; right: 18px; z-index: 100;
+    background: var(--panel); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+    border: .5px solid var(--sep-strong); color: var(--label);
+    border-radius: 980px; padding: 8px 15px; font-size: 12px; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 7px;
+    box-shadow: 0 6px 20px var(--shadow);
+  }
+  .theme-toggle:active { transform: scale(.97); }
+
+  .app {
+    width: 1400px; height: 858px;
+    background: var(--window);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 40px 100px var(--shadow), 0 0 0 .5px var(--sep-strong);
+    display: flex; flex-direction: column;
+    transition: background .3s ease;
+  }
+
+  /* ===== Unified titlebar/toolbar ===== */
+  .titlebar {
+    height: 40px; display: flex; align-items: center; gap: 12px; padding: 0 14px;
+    background: var(--titlebar);
+    -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+    border-bottom: .5px solid var(--sep); user-select: none;
+  }
+  .traffic-lights { display: flex; gap: 8px; }
+  .light { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.2); }
+  .light.red { background: #ff5f57; } .light.yellow { background: #febc2e; } .light.green { background: #28c840; }
+  .tb-title { font-size: 13px; font-weight: 600; color: var(--label); }
+  .tb-sub { font-size: 12px; color: var(--label-2); }
+  .tb-spacer { flex: 1; }
+  .tb-controls { display: flex; align-items: center; gap: 8px; }
+  .seg {
+    display: flex; background: var(--card); border-radius: 7px; padding: 2px; gap: 1px;
+    border: .5px solid var(--sep);
+  }
+  .seg .si { padding: 3px 11px; border-radius: 5px; font-size: 12px; color: var(--label-2); cursor: pointer; font-weight: 500; }
+  .seg .si.on { background: var(--content); color: var(--label); box-shadow: 0 1px 3px var(--shadow); }
+  .tb-btn {
+    width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    color: var(--label-2); cursor: pointer; font-size: 14px; position: relative;
+  }
+  .tb-btn:hover { background: var(--card-hover); color: var(--label); }
+  .tb-btn .dot-badge { position: absolute; top: 2px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+  .mode-pill {
+    background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green);
+    padding: 4px 10px; border-radius: 980px; font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .mode-pill .d { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+  .body { flex: 1; display: flex; min-height: 0; }
+
+  /* ===== Left sidebar (vibrancy) ===== */
+  .left-sidebar {
+    width: 224px; background: var(--sidebar);
+    -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+    border-right: .5px solid var(--sep); display: flex; flex-direction: column;
+  }
+  .sb-head { padding: 14px 18px 6px; font-size: 11px; font-weight: 600; color: var(--label-3); letter-spacing: .02em; }
+  .ws-list { padding: 2px 10px; flex: 1; overflow-y: auto; }
+  .ws { padding: 7px 10px; border-radius: 8px; margin-bottom: 2px; cursor: pointer; }
+  .ws:hover { background: var(--card-hover); }
+  .ws.active { background: var(--accent-fill); }
+  .ws.active, .ws.active * { color: #fff !important; }
+  .ws.active .dot { box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+  .ws-name { display: flex; align-items: center; gap: 9px; font-weight: 590; font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot.running { background: var(--green); }
+  .dot.idle { background: var(--label-3); }
+  .dot.attn { background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+  .ws-meta { margin-top: 3px; font-size: 11px; color: var(--label-2); display: flex; flex-direction: column; gap: 1px; padding-left: 18px; }
+  .ws-meta .row { display: flex; gap: 6px; align-items: center; }
+  .branch { color: var(--purple); } .port { color: var(--green); } .pr { color: var(--accent); } .note { color: var(--orange); font-style: italic; }
+  .new-ws { margin: 6px 14px 14px; padding: 8px; border-radius: 8px; color: var(--label-2); text-align: center; cursor: pointer; font-size: 12px; font-weight: 500; background: var(--card); border: .5px solid var(--sep); }
+  .new-ws:hover { background: var(--card-hover); color: var(--label); }
+
+  /* ===== Center ===== */
+  .center { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--content); }
+  .tab-bar { height: 38px; display: flex; align-items: flex-end; padding: 0 8px; gap: 4px; background: var(--window); border-bottom: .5px solid var(--sep); }
+  .tab { height: 30px; padding: 0 13px; display: flex; align-items: center; gap: 6px; border-radius: 8px 8px 0 0; color: var(--label-2); font-size: 12px; font-weight: 500; cursor: pointer; margin-bottom: -.5px; }
+  .tab:hover { background: var(--card); color: var(--label); }
+  .tab.active { background: var(--content); color: var(--label); box-shadow: 0 -.5px 0 var(--sep) inset; }
+  .tab.active { position: relative; }
+  .tab-add { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; color: var(--label-3); cursor: pointer; font-size: 16px; border-radius: 6px; margin-bottom: 2px; }
+  .tab-add:hover { background: var(--card); color: var(--label); }
+
+  .panes { flex: 1; display: grid; grid-template-columns: 1.05fr 1fr; grid-template-rows: 1.3fr 1fr; gap: 8px; padding: 8px; min-height: 0; background: var(--window); }
+  .pane { background: var(--content); border-radius: 11px; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; box-shadow: 0 1px 4px var(--shadow), 0 0 0 .5px var(--sep); }
+  .pane.attention { box-shadow: 0 0 0 2px var(--accent), 0 1px 4px var(--shadow); }
+  .pane-header { height: 32px; padding: 0 12px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--label-2); border-bottom: .5px solid var(--sep); }
+  .pane-header .left { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+  .pane-header .left .ptitle { color: var(--label); }
+  .badge-attn { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); padding: 2px 8px; border-radius: 980px; font-size: 10px; font-weight: 600; }
+  .badge-warn { background: color-mix(in srgb, var(--orange) 16%, transparent); color: var(--orange); padding: 2px 8px; border-radius: 980px; font-size: 10px; font-weight: 600; }
+  .hbtn { color: var(--label-2); cursor: pointer; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 500; background: var(--card); border: .5px solid var(--sep); }
+  .hbtn:hover { background: var(--card-hover); color: var(--label); }
+  .pane-body { flex: 1; overflow: hidden; }
+
+  /* Terminal */
+  .terminal { background: var(--term-bg); color: #e8e8ea; font-family: "SF Mono","JetBrains Mono",Menlo,monospace; font-size: 12px; padding: 12px 14px; line-height: 1.65; height: 100%; overflow-y: auto; }
+  .terminal pre { font-family: inherit; white-space: pre-wrap; }
+  .prompt { color: #30D158; } .user-input { color: #e8e8ea; }
+  .agent-marker { color: #5AC8FA; font-weight: 600; }
+  .dim { color: rgba(255,255,255,.4); } .file { color: #5AC8FA; } .ok { color: #30D158; }
+  .warn { color: #FFD60A; } .err { color: #FF453A; } .spinner { color: #BF5AF2; } .vline { color: rgba(255,255,255,.35); }
+  .link { color: #5AC8FA; text-decoration: underline dotted; cursor: pointer; }
+  .blink { display: inline-block; width: 7px; height: 14px; background: #e8e8ea; vertical-align: middle; border-radius: 1px; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Screenshot preview */
+  .shot-pane { height: 100%; display: flex; flex-direction: column; }
+  .shot-toolbar { padding: 7px 12px; display: flex; align-items: center; gap: 9px; border-bottom: .5px solid var(--sep); font-size: 11px; color: var(--label-2); }
+  .shot-toolbar select { background: var(--card); color: var(--label); border: .5px solid var(--sep-strong); border-radius: 6px; padding: 3px 8px; font-size: 11px; -webkit-appearance: none; }
+  .shot-toolbar .spacer { flex: 1; }
+  .shot-canvas { flex: 1; display: flex; align-items: center; justify-content: center; padding: 14px; overflow: hidden; background: var(--shot-frame); }
+  .shot-img { width: 92%; max-height: 100%; border-radius: 8px; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,.5), 0 0 0 .5px rgba(0,0,0,.3); background: #fff; }
+  .fake-site { background: #fff; color: #111; font-family: -apple-system, sans-serif; }
+  .fs-nav { background: linear-gradient(135deg,#0A84FF,#5E5CE6); color: #fff; padding: 9px 15px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+  .fs-body { padding: 15px; }
+  .fs-body h3 { font-size: 14px; margin-bottom: 8px; color:#111; }
+  .stat { display: flex; gap: 10px; margin: 9px 0; }
+  .stat .box { flex: 1; background: #f2f2f7; border-radius: 10px; padding: 10px; text-align: center; }
+  .stat .num { font-size: 19px; font-weight: 700; color: #0A84FF; }
+  .stat .lbl { font-size: 9px; color: #8e8e93; font-weight: 600; letter-spacing: .04em; }
+  .err-row { background: #fff0ef; color: #d70015; padding: 7px 9px; border-radius: 8px; font-size: 11px; margin-top: 6px; font-weight: 500; }
+  .shot-meta { padding: 7px 12px; font-size: 10px; color: var(--label-2); border-top: .5px solid var(--sep); display: flex; gap: 14px; }
+
+  /* Code viewer + diff */
+  .code-pane { height: 100%; display: flex; flex-direction: column; }
+  .code-toolbar { padding: 6px 12px; display: flex; align-items: center; gap: 8px; border-bottom: .5px solid var(--sep); font-size: 11px; color: var(--label-2); }
+  .code-toolbar .spacer { flex: 1; }
+  .btn-mini { padding: 4px 11px; border-radius: 980px; font-size: 11px; font-weight: 600; cursor: pointer; border: .5px solid var(--sep-strong); background: var(--card); color: var(--label-2); }
+  .btn-mini.accent { background: var(--accent-fill); color: #fff; border-color: transparent; }
+  .code-body { flex: 1; overflow-y: auto; font-family: "SF Mono",Menlo,monospace; font-size: 11.5px; line-height: 1.6; }
+  .code-line { display: flex; }
+  .code-line .ln { width: 38px; text-align: right; padding-right: 11px; color: var(--label-3); user-select: none; flex-shrink: 0; }
+  .code-line .ct { padding-left: 10px; white-space: pre; color: var(--label); }
+  .code-line.add { background: var(--diff-add-bg); } .code-line.add .ct { color: var(--green); }
+  .code-line.del { background: var(--diff-del-bg); } .code-line.del .ct { color: var(--red); }
+  .hunk-bar { background: var(--card); padding: 5px 12px; font-size: 10.5px; color: var(--label-2); display: flex; align-items: center; gap: 8px; border-top: .5px solid var(--sep); border-bottom: .5px solid var(--sep); }
+  .h-actions { margin-left: auto; display: flex; gap: 6px; }
+  .h-btn { padding: 3px 11px; border-radius: 980px; cursor: pointer; font-size: 10px; font-weight: 600; }
+  .h-btn.acc { background: color-mix(in srgb,var(--green) 16%,transparent); color: var(--green); }
+  .h-btn.rej { background: color-mix(in srgb,var(--red) 16%,transparent); color: var(--red); }
+  .kw { color: var(--purple); } .str { color: var(--green); } .fn { color: var(--accent); } .cm { color: var(--label-3); font-style: italic; }
+
+  /* Session replay */
+  .replay-pane { height: 100%; display: flex; flex-direction: column; }
+  .replay-top { flex: 1; padding: 12px 14px; overflow-y: auto; font-size: 12px; }
+  .replay-step { color: var(--label); font-weight: 600; margin-bottom: 5px; }
+  .replay-detail { color: var(--label-2); font-size: 11px; margin-bottom: 10px; }
+  .replay-events { display: flex; flex-direction: column; gap: 5px; }
+  .rev { display: flex; gap: 9px; font-size: 11px; color: var(--label-2); align-items: center; }
+  .rev .ic { width: 18px; flex-shrink: 0; text-align: center; }
+  .scrubber { padding: 10px 14px 12px; border-top: .5px solid var(--sep); }
+  .scrub-track { position: relative; height: 26px; background: var(--card); border-radius: 7px; overflow: hidden; }
+  .scrub-heat { position: absolute; top: 0; bottom: 0; opacity: .55; }
+  .scrub-playhead { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--accent); }
+  .scrub-playhead::after { content: ''; position: absolute; top: -5px; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 1px 4px var(--shadow); }
+  .scrub-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--label-3); margin-top: 5px; }
+
+  /* ===== Right sidebar (vibrancy) ===== */
+  .right-sidebar {
+    width: 286px; background: var(--sidebar);
+    -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+    border-left: .5px solid var(--sep); display: flex; flex-direction: column;
+  }
+  .panel-switcher { padding: 10px 12px 8px; }
+  .ps-seg { display: flex; background: var(--card); border-radius: 8px; padding: 2px; border: .5px solid var(--sep); }
+  .ps-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; color: var(--label-2); cursor: pointer; font-size: 11px; font-weight: 500; padding: 5px 0; border-radius: 6px; }
+  .ps-tab.on { background: var(--content); color: var(--label); box-shadow: 0 1px 3px var(--shadow); }
+  .ps-tab .pb { background: var(--red); color: #fff; border-radius: 980px; font-size: 9px; padding: 0 5px; font-weight: 700; }
+  .panel-body { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+  .grp { margin-top: 14px; }
+  .grp h4 { font-size: 11px; font-weight: 600; color: var(--label-3); margin: 0 4px 7px; letter-spacing: .01em; }
+  .card-block { background: var(--card); border-radius: 11px; padding: 11px 13px; border: .5px solid var(--sep); }
+  .agent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .agent-name { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+  .agent-state { font-size: 10px; color: var(--label-2); }
+  .activity-item { display: flex; gap: 9px; font-size: 11.5px; padding: 3px 0; color: var(--label-2); align-items: center; }
+  .activity-item .icon { width: 17px; flex-shrink: 0; text-align: center; }
+  .activity-item code { background: color-mix(in srgb,var(--accent) 12%,transparent); padding: 1px 5px; border-radius: 5px; font-family: "SF Mono",monospace; font-size: 10.5px; color: var(--accent); }
+  .approval-card { background: color-mix(in srgb,var(--red) 9%,transparent); border: .5px solid color-mix(in srgb,var(--red) 35%,transparent); border-radius: 11px; padding: 12px 13px; }
+  .warn-label { display: flex; align-items: center; gap: 6px; color: var(--red); font-weight: 600; font-size: 11px; margin-bottom: 5px; }
+  .ask { font-size: 12px; color: var(--label); margin-bottom: 5px; }
+  .approval-card pre { background: var(--code-bg); color: #e8e8ea; padding: 8px 10px; border-radius: 8px; font-family: "SF Mono",monospace; font-size: 11px; margin: 7px 0; overflow-x: auto; }
+  .approval-actions { display: flex; gap: 7px; margin-top: 9px; }
+  .btn { border: none; cursor: pointer; padding: 6px 13px; border-radius: 980px; font-size: 11px; font-weight: 600; }
+  .btn.approve { background: var(--accent-fill); color: #fff; }
+  .btn.deny { background: var(--card-hover); color: var(--red); }
+  .btn.allow { background: transparent; color: var(--label-2); }
+  .cost-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11.5px; }
+  .cost-row .num { color: var(--label); font-family: "SF Mono",monospace; font-weight: 500; }
+  .mcp-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 11.5px; }
+  .mcp-row .sd { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .mcp-row .ver { margin-left: auto; color: var(--label-3); font-size: 10px; }
+
+  /* Status bar */
+  .statusbar { height: 28px; background: var(--titlebar); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); border-top: .5px solid var(--sep); display: flex; align-items: center; padding: 0 14px; gap: 18px; font-size: 11px; color: var(--label-2); }
+  .status-item { display: flex; align-items: center; gap: 5px; }
+  .status-item .glyph { color: var(--label-3); } .status-item .v { color: var(--label); }
+  .chip { background: color-mix(in srgb,var(--green) 14%,transparent); color: var(--green); padding: 1px 7px; border-radius: 980px; font-family: "SF Mono",monospace; font-size: 10px; }
+  .status-spacer { flex: 1; }
+  .attn-state { color: var(--accent); font-weight: 500; }
+  .caption { font-size: 12px; color: var(--label-2); text-align: center; max-width: 1100px; }
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="toggleTheme()"><span id="ti">☀︎</span><span id="tl">Light</span></button>
+
+<div class="app">
+  <!-- Titlebar / toolbar -->
+  <div class="titlebar">
+    <div class="traffic-lights"><div class="light red"></div><div class="light yellow"></div><div class="light green"></div></div>
+    <div style="display:flex; align-items:baseline; gap:8px; margin-left:6px;">
+      <span class="tb-title">myapp</span>
+      <span class="tb-sub">~/dev/myapp · main</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <span class="mode-pill"><span class="d"></span> Watch mode</span>
+    <div class="seg">
+      <span class="si on">Code</span>
+      <span class="si">Replay</span>
+    </div>
+    <div class="tb-btn">⌘K</div>
+    <div class="tb-btn">🔔<span class="dot-badge"></span></div>
+    <div class="tb-btn">⚙︎</div>
+  </div>
+
+  <div class="body">
+    <!-- Left -->
+    <div class="left-sidebar">
+      <div class="sb-head">Workspaces</div>
+      <div class="ws-list">
+        <div class="ws active">
+          <div class="ws-name"><span class="dot running"></span><span>myapp</span></div>
+          <div class="ws-meta">
+            <div class="row"><span class="branch">⎇ main</span><span class="dim">· 3 mod</span></div>
+            <div class="row"><span class="pr">PR #42</span><span class="dim">· CI ✓</span></div>
+            <div class="row"><span class="port">:3000</span></div>
+          </div>
+        </div>
+        <div class="ws">
+          <div class="ws-name"><span class="dot attn"></span><span>prod-monitor</span></div>
+          <div class="ws-meta"><div class="row note">claude waiting…</div></div>
+        </div>
+        <div class="ws">
+          <div class="ws-name"><span class="dot idle"></span><span>blog</span></div>
+          <div class="ws-meta"><div class="row"><span class="branch">⎇ dev</span></div></div>
+        </div>
+        <div class="ws">
+          <div class="ws-name"><span class="dot idle"></span><span>infra-tf</span></div>
+          <div class="ws-meta"><div class="row"><span class="branch">⎇ feat/k8s</span></div></div>
+        </div>
+      </div>
+      <div class="new-ws">+ New workspace</div>
+    </div>
+
+    <!-- Center -->
+    <div class="center">
+      <div class="tab-bar">
+        <div class="tab active"><span>●</span> claude</div>
+        <div class="tab"><span>📸</span> Screenshot</div>
+        <div class="tab"><span>±</span> UserService.ts</div>
+        <div class="tab"><span>⏱</span> Replay</div>
+        <div class="tab"><span>$</span> shell</div>
+        <div class="tab-add">+</div>
+      </div>
+
+      <div class="panes">
+        <!-- claude terminal -->
+        <div class="pane attention">
+          <div class="pane-header">
+            <div class="left"><span>●</span><span class="ptitle">claude</span><span class="badge-attn">needs input</span></div>
+            <div class="hbtn">⌘1</div>
+          </div>
+          <div class="pane-body">
+            <div class="terminal">
+<pre><span class="prompt">myapp ❯</span> <span class="user-input">check production /api/users + screenshot dashboard, report 5xx</span>
+
+<span class="agent-marker">✦ claude</span> <span class="dim">opus-4.7 · via Chrome DevTools MCP</span>
+
+<span class="agent-marker">🌐</span> navigate <span class="file">prod.myapp.com/admin</span> <span class="ok">(logged in)</span>
+<span class="agent-marker">📸</span> screenshot captured
+<span class="agent-marker">🔧</span> evaluate <span class="dim">fetch('/api/users').status</span> → <span class="ok">200</span>
+<span class="agent-marker">🌐</span> network.getRequests <span class="dim">filter: status≥500</span>
+  <span class="vline">└─</span> <span class="err">3 requests failed (500)</span>
+
+<span class="dim">Production check complete:</span>
+  <span class="ok">✓</span> /api/users → 200 OK (142ms)
+  <span class="warn">⚠</span> 3 × 500 in last hour (baseline 0.8/h)
+  <span class="vline">└─</span> NullPointerException
+       <span class="link">src/services/UserService.ts:142</span>
+
+Want me to open the failing file and propose a fix? <span class="blink"></span></pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- screenshot preview -->
+        <div class="pane">
+          <div class="pane-header">
+            <div class="left"><span>📸</span><span class="ptitle">Screenshot preview</span><span style="color:var(--label-3)">from MCP</span></div>
+            <div class="hbtn">⤢ Lightbox</div>
+          </div>
+          <div class="pane-body">
+            <div class="shot-pane">
+              <div class="shot-toolbar">
+                <span>Session</span>
+                <select><option>prod-monitor · Chrome</option></select>
+                <span class="spacer"></span>
+                <span style="color:var(--label-3)">shot 4 / 7</span>
+              </div>
+              <div class="shot-canvas">
+                <div class="shot-img">
+                  <div class="fake-site">
+                    <div class="fs-nav"><span>myapp admin</span><span>claude@…</span></div>
+                    <div class="fs-body">
+                      <h3>Dashboard</h3>
+                      <div class="stat">
+                        <div class="box"><div class="num">1,284</div><div class="lbl">USERS</div></div>
+                        <div class="box"><div class="num">99.2%</div><div class="lbl">UPTIME</div></div>
+                        <div class="box"><div class="num">3</div><div class="lbl">ERRORS/H</div></div>
+                      </div>
+                      <div class="err-row">⚠ 500 — UserService.findById (×3 last hour)</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="shot-meta"><span>🕐 captured 2s ago</span><span>🌐 prod.myapp.com/admin</span><span>1280×800</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- code viewer + diff -->
+        <div class="pane">
+          <div class="pane-header">
+            <div class="left"><span>±</span><span class="ptitle">UserService.ts</span><span class="badge-warn">2 pending</span></div>
+            <div class="hbtn">⌘E Open in Cursor</div>
+          </div>
+          <div class="pane-body">
+            <div class="code-pane">
+              <div class="code-toolbar">
+                <span>claude edited · review mode</span>
+                <span class="spacer"></span>
+                <span class="btn-mini">Reject all</span>
+                <span class="btn-mini accent">Accept all</span>
+              </div>
+              <div class="code-body">
+                <div class="code-line"><span class="ln">140</span><span class="ct">  <span class="kw">async</span> <span class="fn">findById</span>(id: <span class="kw">string</span>) {</span></div>
+                <div class="code-line del"><span class="ln">141</span><span class="ct">    <span class="kw">return</span> <span class="kw">this</span>.repo.findOne(id)</span></div>
+                <div class="hunk-bar">
+                  <span>hunk 1 · null-safety</span>
+                  <div class="h-actions"><span class="h-btn rej">Reject</span><span class="h-btn acc">Accept ⌘⏎</span></div>
+                </div>
+                <div class="code-line add"><span class="ln">141</span><span class="ct">    <span class="kw">const</span> u = <span class="kw">await</span> <span class="kw">this</span>.repo.findOne(id)</span></div>
+                <div class="code-line add"><span class="ln">142</span><span class="ct">    <span class="kw">if</span> (!u) <span class="kw">throw new</span> <span class="fn">NotFoundError</span>(id)</span></div>
+                <div class="code-line add"><span class="ln">143</span><span class="ct">    <span class="kw">return</span> u</span></div>
+                <div class="code-line"><span class="ln">144</span><span class="ct">  }</span></div>
+                <div class="code-line"><span class="ln">145</span><span class="ct"></span></div>
+                <div class="code-line"><span class="ln">146</span><span class="ct">  <span class="cm">// caller in users.ts</span></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- session replay -->
+        <div class="pane">
+          <div class="pane-header">
+            <div class="left"><span>⏱</span><span class="ptitle">Session Replay</span><span style="color:var(--label-3)">prod-monitor · 4m</span></div>
+            <div class="hbtn">⎙ Export</div>
+          </div>
+          <div class="pane-body">
+            <div class="replay-pane">
+              <div class="replay-top">
+                <div class="replay-step">t = 2:14 · Browser inspection</div>
+                <div class="replay-detail">Agent navigated to admin dashboard, captured network panel, found failing requests.</div>
+                <div class="replay-events">
+                  <div class="rev"><span class="ic">🌐</span> navigate → prod.myapp.com/admin</div>
+                  <div class="rev"><span class="ic">📸</span> screenshot (shot #4)</div>
+                  <div class="rev"><span class="ic">🔗</span> network: 18 requests · 3 × 500</div>
+                  <div class="rev"><span class="ic">📖</span> read UserService.ts</div>
+                  <div class="rev"><span class="ic">✏︎</span> staged edit +3 −1</div>
+                </div>
+              </div>
+              <div class="scrubber">
+                <div class="scrub-track">
+                  <div class="scrub-heat" style="left:0%;width:18%;background:var(--accent);"></div>
+                  <div class="scrub-heat" style="left:22%;width:30%;background:var(--green);"></div>
+                  <div class="scrub-heat" style="left:55%;width:25%;background:var(--orange);"></div>
+                  <div class="scrub-heat" style="left:82%;width:18%;background:var(--purple);"></div>
+                  <div class="scrub-playhead" style="left:54%;"></div>
+                </div>
+                <div class="scrub-labels"><span>0:00</span><span>1:00</span><span>2:14</span><span>3:00</span><span>4:02</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="right-sidebar">
+      <div class="panel-switcher">
+        <div class="ps-seg">
+          <span class="ps-tab">Files</span>
+          <span class="ps-tab">Git <span class="pb">3</span></span>
+          <span class="ps-tab on">AI <span class="pb">1</span></span>
+          <span class="ps-tab">MCP</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div class="grp">
+          <h4>Approval queue · gate</h4>
+          <div class="approval-card">
+            <div class="warn-label"><span>⚠</span> claude wants to run</div>
+            <pre>git push origin main --force</pre>
+            <div class="ask">Force-push to <code>main</code> — overwrites remote history.</div>
+            <div class="approval-actions">
+              <button class="btn approve">Approve</button>
+              <button class="btn deny">Deny</button>
+              <button class="btn allow">Once</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grp">
+          <h4>Active agents</h4>
+          <div class="card-block">
+            <div class="agent-header"><div class="agent-name"><span class="dot running"></span>claude</div><span class="agent-state">4m 02s · running</span></div>
+            <div class="activity-item"><span class="icon" style="color:var(--green)">🌐</span> Navigated <code>/admin</code></div>
+            <div class="activity-item"><span class="icon" style="color:var(--orange)">📸</span> Screenshot captured</div>
+            <div class="activity-item"><span class="icon" style="color:var(--accent)">🔗</span> Network · <span style="color:var(--red)">3 × 500</span></div>
+            <div class="activity-item"><span class="icon" style="color:var(--accent)">📖</span> Read <code>UserService.ts</code></div>
+            <div class="activity-item"><span class="icon" style="color:var(--yellow)">✏︎</span> Staged edit <code>+3 −1</code></div>
+          </div>
+        </div>
+
+        <div class="grp">
+          <h4>MCP servers</h4>
+          <div class="card-block">
+            <div class="mcp-row"><span class="sd"></span> Chrome DevTools MCP <span class="ver">v0.4.2</span></div>
+            <div class="mcp-row"><span class="sd"></span> vmux builtin <span class="ver">file·cmd·ws</span></div>
+            <div class="mcp-row"><span class="sd" style="background:var(--label-3)"></span> Playwright MCP <span class="ver">idle</span></div>
+          </div>
+        </div>
+
+        <div class="grp">
+          <h4>Session cost</h4>
+          <div class="card-block">
+            <div class="cost-row"><span>claude · opus-4.7</span><span class="num">$0.51</span></div>
+            <div class="cost-row" style="border-top:.5px solid var(--sep); margin-top:5px; padding-top:7px;"><span style="color:var(--label)">Total today</span><span class="num" style="color:var(--green)">$4.22</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <div class="status-item"><span class="glyph">⎇</span><span class="v">main</span></div>
+    <div class="status-item"><span>3 modified</span></div>
+    <div class="status-item"><span class="chip">:3000</span></div>
+    <div class="status-item attn-state">✦ claude waiting for input</div>
+    <div class="status-spacer"></div>
+    <div class="status-item"><span class="glyph">🔗</span> MCP · 2 active</div>
+    <div class="status-item"><span class="glyph">🌐</span> Chrome · headless</div>
+    <div class="status-item">v1.0.0</div>
+  </div>
+</div>
+
+<div class="caption">vmux — Apple-style · AI terminal observatory · vibrancy sidebars, SF Pro, macOS system colors · screenshot preview (no embedded browser) + diff review (no built-in editor)</div>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    document.getElementById('ti').textContent = next === 'dark' ? '☀︎' : '☾';
+    document.getElementById('tl').textContent = next === 'dark' ? 'Light' : 'Dark';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+name: Vmux
+options:
+  bundleIdPrefix: com.vmux
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "0.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    # App Sandbox intentionally OFF (no com.apple.security.app-sandbox entitlement):
+    # vmux spawns PTYs, external Chrome, and MCP servers across the filesystem.
+    DEAD_CODE_STRIPPING: YES
+
+targets:
+  Vmux:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Vmux
+    info:
+      path: Vmux/Info.plist
+      properties:
+        CFBundleDisplayName: vmux
+        CFBundleName: vmux
+        LSMinimumSystemVersion: "14.0"
+        NSHumanReadableCopyright: "Copyright © 2026 vmux. MIT License."
+        LSApplicationCategoryType: public.app-category.developer-tools
+    entitlements:
+      path: Vmux/Vmux.entitlements
+      properties:
+        # Hardened Runtime baseline. No JIT, no disabled library validation yet.
+        com.apple.security.cs.allow-unsigned-executable-memory: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vmux.app
+        INFOPLIST_KEY_NSMainNibFile: ""
+        INFOPLIST_KEY_LSUIElement: NO
+        # Ad-hoc sign for local dev/CI; release signing is handled by make-dmg.sh.
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+    postBuildScripts:
+      - name: Embed vmux-sidecar
+        basedOnDependencyAnalysis: false
+        script: |
+          set -euo pipefail
+          SIDECAR_SRC="$SRCROOT/../sidecar/bin/vmux-sidecar"
+          DEST_DIR="$BUILT_PRODUCTS_DIR/$CONTENTS_FOLDER_PATH/Resources"
+          if [ ! -f "$SIDECAR_SRC" ]; then
+            # A Release app without the sidecar is broken; fail hard. Debug may
+            # legitimately build the shell before the sidecar exists.
+            if [ "$CONFIGURATION" = "Release" ]; then
+              echo "error: vmux-sidecar missing at $SIDECAR_SRC for Release build"
+              exit 1
+            fi
+            echo "warning: vmux-sidecar not found at $SIDECAR_SRC — run 'make sidecar' (or 'make build') first"
+            exit 0
+          fi
+          mkdir -p "$DEST_DIR"
+          cp "$SIDECAR_SRC" "$DEST_DIR/vmux-sidecar"
+          chmod +x "$DEST_DIR/vmux-sidecar"
+          echo "Embedded sidecar into $DEST_DIR/vmux-sidecar"

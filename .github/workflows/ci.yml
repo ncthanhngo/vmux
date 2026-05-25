@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & test (macOS)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: sidecar/go.mod
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app || sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Sidecar — vet & test
+        working-directory: sidecar
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build universal sidecar
+        run: ./scripts/build-sidecar.sh
+
+      - name: Verify universal binary
+        run: |
+          info=$(lipo -info sidecar/bin/vmux-sidecar)
+          echo "$info"
+          echo "$info" | grep -q arm64
+          echo "$info" | grep -q x86_64
+
+      - name: Build app (unsigned)
+        run: CONFIGURATION=Debug ./scripts/build-app.sh
+
+      # Notarization runs only on release (out of scope for PR CI) to avoid
+      # Apple notary-service flakiness blocking every pull request.
