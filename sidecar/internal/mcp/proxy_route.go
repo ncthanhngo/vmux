@@ -9,14 +9,14 @@ import (
 
 // callTool routes a tools/call to a native handler or an owning upstream,
 // logging the call (tool, args, summary, duration) to the Activity stream.
-func (p *Proxy) callTool(ctx context.Context, params json.RawMessage) (any, error) {
+func (p *Proxy) callTool(ctx context.Context, sessionID string, params json.RawMessage) (any, error) {
 	var call CallToolParams
 	if err := json.Unmarshal(params, &call); err != nil {
 		return nil, &RPCError{Code: -32602, Message: "invalid tools/call params"}
 	}
 
 	start := time.Now()
-	rec := ToolCallRecord{Time: start.UTC(), Tool: call.Name, Args: string(call.Arguments)}
+	rec := ToolCallRecord{Time: start.UTC(), SessionID: sessionID, Tool: call.Name, Args: string(call.Arguments)}
 
 	if handler, ok := p.nativeByName[call.Name]; ok {
 		res, err := handler(ctx, call.Arguments)

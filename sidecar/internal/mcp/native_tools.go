@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/vmux/sidecar/internal/approval"
 	"github.com/vmux/sidecar/internal/workspace"
 )
 
@@ -14,7 +15,9 @@ import (
 type NativeTools struct {
 	ws       *workspace.Registry
 	activity ActivityLogger
-	// cmdAllowlist gates command_run until the phase-7 approval queue exists.
+	gate     *approval.Gate
+	// cmdAllowlist is a coarse first filter; the approval gate is the real
+	// control for command_run in gate/sandbox mode.
 	cmdAllowlist map[string]bool
 }
 
@@ -26,10 +29,11 @@ type NativeTools struct {
 // code (go, node, npm, and `git -c …`) are intentionally excluded until the
 // phase-7 approval queue can prompt the user per-invocation. Until then, treat
 // command_run as a convenience for inspection, not a sandbox.
-func NewNativeTools(ws *workspace.Registry, activity ActivityLogger) *NativeTools {
+func NewNativeTools(ws *workspace.Registry, activity ActivityLogger, gate *approval.Gate) *NativeTools {
 	return &NativeTools{
 		ws:       ws,
 		activity: activity,
+		gate:     gate,
 		cmdAllowlist: map[string]bool{
 			"ls": true, "cat": true, "pwd": true, "echo": true,
 			"head": true, "tail": true, "wc": true, "grep": true,

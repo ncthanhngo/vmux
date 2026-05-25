@@ -37,7 +37,7 @@ func setupClient(t *testing.T, p *Proxy) (*Peer, context.Context) {
 	t.Cleanup(cancel)
 
 	cConn, sConn := net.Pipe()
-	server := NewPeer(sConn, p.handler(ctx))
+	server := NewPeer(sConn, p.handler(ctx, "test-session"))
 	go server.Run(ctx)
 	client := NewPeer(cConn, nil)
 	go client.Run(ctx)
@@ -82,7 +82,7 @@ func TestProxyNativeAndUpstream(t *testing.T) {
 	}
 
 	act := &captureActivity{}
-	proxy := NewProxy(nil, act, NewNativeTools(reg, act))
+	proxy := NewProxy(nil, act, NewNativeTools(reg, act, nil))
 
 	// Spawn the fake upstream MCP server (real subprocess via the helper).
 	u, err := StartUpstream(context.Background(), UpstreamConfig{

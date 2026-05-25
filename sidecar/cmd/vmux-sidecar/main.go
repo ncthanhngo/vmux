@@ -56,7 +56,12 @@ func main() {
 		log.Error("resolve shots dir", "err", err)
 		os.Exit(1)
 	}
-	svc, err := internal.NewService(log, store, shotsDir)
+	sessionsDir, err := paths.SessionsDir()
+	if err != nil {
+		log.Error("resolve sessions dir", "err", err)
+		os.Exit(1)
+	}
+	svc, err := internal.NewService(log, store, shotsDir, sessionsDir)
 	if err != nil {
 		log.Error("service init failed", "err", err)
 		os.Exit(1)

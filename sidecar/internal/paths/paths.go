@@ -45,6 +45,15 @@ func MCPServersDir() (string, error) {
 	return filepath.Join(dir, "mcp-servers"), nil
 }
 
+// SessionsDir returns the directory where per-session activity logs are stored.
+func SessionsDir() (string, error) {
+	dir, err := AppSupportDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "sessions"), nil
+}
+
 // ShotsDir returns the directory where browser screenshots are stored.
 func ShotsDir() (string, error) {
 	dir, err := AppSupportDir()

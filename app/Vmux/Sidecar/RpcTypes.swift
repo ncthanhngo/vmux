@@ -113,5 +113,83 @@ struct BrowserSessionParams: Encodable {
     let sessionId: String
 }
 
+// MARK: - Activity / Approval
+
+/// One activity event (`activity.event` notification / `activity.recent` result).
+struct ActivityEvent: Decodable, Identifiable {
+    let seq: Int64
+    let ts: String
+    let sessionId: String
+    let kind: String
+    let actor: String?
+    let summary: String
+    let detail: String?
+    let risk: String?
+    var id: Int64 { seq }
+}
+
+struct ActivityRecentResult: Decodable {
+    let events: [ActivityEvent]
+}
+
+/// A pending approval item (`approval.changed` notification / `approval.list`).
+struct PendingApproval: Decodable, Identifiable {
+    let id: String
+    let tool: String
+    let command: String
+    let args: [String]?
+    let workspace: String
+    let ruleId: String
+    let reason: String
+}
+
+struct ApprovalChangedNote: Decodable {
+    let pending: [PendingApproval]
+}
+
+struct ApprovalDecideParams: Encodable {
+    let id: String
+    let allow: Bool
+}
+
+struct SetModeParams: Encodable {
+    let workspaceId: String
+    let mode: String
+}
+
+// MARK: - Replay
+
+struct ReplayTimelineParams: Encodable {
+    let sessionId: String
+    let bucketSeconds: Int
+}
+
+struct ReplayMoment: Decodable, Identifiable {
+    let t: String
+    let count: Int
+    let kind: String
+    let maxRisk: String
+    var id: String { t }
+}
+
+struct ReplayTimelineResult: Decodable {
+    let start: String
+    let end: String
+    let moments: [ReplayMoment]
+}
+
+struct ReplayAtParams: Encodable {
+    let sessionId: String
+    let t: String // RFC3339
+    let windowSeconds: Int
+}
+
+struct ReplaySnapshot: Decodable {
+    let lastToolCall: String?
+    let filesTouched: [String]?
+    let commandsRun: [String]?
+    let consoleErrors: [String]?
+}
+
 /// Empty params for methods that take none.
 struct NoParams: Encodable {}

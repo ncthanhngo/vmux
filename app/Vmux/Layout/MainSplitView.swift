@@ -4,6 +4,7 @@ import SwiftUI
 /// with a toolbar and bottom status bar. Assembled from the design system.
 struct MainSplitView: View {
     @EnvironmentObject var app: AppState
+    @State private var replaySession: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,13 +32,28 @@ struct MainSplitView: View {
 
     private func rightSidebar(_ ws: WorkspaceDTO) -> some View {
         VStack(spacing: 0) {
-            FileTreeView(workspace: ws)
-                .frame(maxHeight: .infinity)
-            Divider()
             ScrollView {
-                BrowserSessionsView(model: app.browser).padding(8)
+                VStack(alignment: .leading, spacing: 14) {
+                    ActivityPanelView(model: app.activity, workspaceID: ws.id)
+                    if let session = app.activity.events.last?.sessionId {
+                        CapsuleButton(title: "Open Session Replay", style: .plain) {
+                            replaySession = session
+                        }
+                    }
+                    BrowserSessionsView(model: app.browser)
+                }
+                .padding(8)
             }
-            .frame(maxHeight: 300)
+            .frame(maxHeight: .infinity)
+            Divider()
+            FileTreeView(workspace: ws)
+                .frame(maxHeight: 280)
+        }
+        .sheet(item: Binding(
+            get: { replaySession.map { ReplaySessionItem(id: $0) } },
+            set: { if $0 == nil { replaySession = nil } }
+        )) { item in
+            ReplayView(model: ReplayModel(client: app.client, sessionID: item.id), onClose: { replaySession = nil })
         }
     }
 
@@ -113,6 +129,10 @@ private struct CenterArea: View {
         guard let ws = app.selectedWorkspaceID, let sel = app.selectedTabID[ws] else { return nil }
         return app.currentTabs.first { $0.id == sel }
     }
+}
+
+private struct ReplaySessionItem: Identifiable {
+    let id: String
 }
 
 private struct EmptyStateView: View {

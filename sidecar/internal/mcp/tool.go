@@ -19,6 +19,7 @@ type registeredTool struct {
 // ToolCallRecord is one logged proxy tool call (consumed by the Activity store).
 type ToolCallRecord struct {
 	Time      time.Time `json:"time"`
+	SessionID string    `json:"sessionId"` // per-agent-connection id
 	Tool      string    `json:"tool"`
 	Upstream  string    `json:"upstream,omitempty"` // empty for vmux-native tools
 	Args      string    `json:"args"`

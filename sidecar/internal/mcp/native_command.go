@@ -6,7 +6,15 @@ import (
 	"fmt"
 	"os/exec"
 	"time"
+
+	"github.com/vmux/sidecar/internal/approval"
 )
+
+// approvalTimeout bounds how long a gated command waits for a human decision
+// before it is denied — prevents an unattended agent from hanging forever on a
+// pending approval (the connection/tool call would otherwise block until the
+// agent disconnects).
+const approvalTimeout = 10 * time.Minute
 
 // commandRunTimeout bounds a single command_run invocation.
 const commandRunTimeout = 60 * time.Second
@@ -31,14 +39,28 @@ func (n *NativeTools) runCommand(ctx context.Context, args json.RawMessage) (Cal
 	if err := json.Unmarshal(args, &p); err != nil {
 		return ErrorResult("invalid arguments: " + err.Error()), nil
 	}
-	// Deny-by-default: only allowlisted commands run until phase-7 approval
-	// can prompt the user for arbitrary commands.
-	if !n.cmdAllowlist[p.Command] {
-		return ErrorResult(fmt.Sprintf("command %q not allowed (awaiting approval gate)", p.Command)), nil
-	}
 	ws, ok := n.ws.Get(p.WorkspaceID)
 	if !ok {
 		return ErrorResult(fmt.Sprintf("unknown workspace %q", p.WorkspaceID)), nil
+	}
+
+	// Approval gate: in gate mode a dangerous command blocks for user approval;
+	// in sandbox mode commands are denied. In watch mode the gate allows and we
+	// fall back to the coarse allowlist as a safety net.
+	if n.gate != nil {
+		gateCtx, cancelGate := context.WithTimeout(ctx, approvalTimeout)
+		allowed, reason := n.gate.Check(gateCtx, approval.Action{
+			Tool: "command_run", Command: p.Command, Args: p.Args, Workspace: p.WorkspaceID,
+		})
+		cancelGate()
+		if !allowed {
+			return ErrorResult("blocked: " + reason), nil
+		}
+		if n.gate.Mode(p.WorkspaceID) == approval.ModeWatch && !n.cmdAllowlist[p.Command] {
+			return ErrorResult(fmt.Sprintf("command %q not allowed in watch mode (switch to gate mode to approve arbitrary commands)", p.Command)), nil
+		}
+	} else if !n.cmdAllowlist[p.Command] {
+		return ErrorResult(fmt.Sprintf("command %q not allowed", p.Command)), nil
 	}
 
 	runCtx, cancel := context.WithTimeout(ctx, commandRunTimeout)

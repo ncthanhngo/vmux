@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/vmux/sidecar/internal/id"
 	"github.com/vmux/sidecar/internal/peercred"
 )
 
@@ -95,13 +96,14 @@ func (p *Proxy) Serve(ctx context.Context, ln net.Listener) error {
 			conn.Close()
 			continue
 		}
-		peer := NewPeer(conn, p.handler(ctx))
+		// Each agent connection is one activity "session".
+		peer := NewPeer(conn, p.handler(ctx, id.New()))
 		go peer.Run(ctx)
 	}
 }
 
-// handler returns the per-connection MCP request handler.
-func (p *Proxy) handler(serveCtx context.Context) RequestHandler {
+// handler returns the per-connection MCP request handler bound to a session id.
+func (p *Proxy) handler(serveCtx context.Context, sessionID string) RequestHandler {
 	return func(ctx context.Context, method string, params json.RawMessage) (any, error) {
 		switch method {
 		case "initialize":
@@ -117,7 +119,7 @@ func (p *Proxy) handler(serveCtx context.Context) RequestHandler {
 		case "tools/list":
 			return ListToolsResult{Tools: p.allTools()}, nil
 		case "tools/call":
-			return p.callTool(ctx, params)
+			return p.callTool(ctx, sessionID, params)
 		default:
 			return nil, &RPCError{Code: -32601, Message: "method not found: " + method}
 		}

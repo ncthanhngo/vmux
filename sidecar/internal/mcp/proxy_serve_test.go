@@ -21,7 +21,7 @@ func TestProxyServeOverSocket(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reg.Shutdown()
-	proxy := NewProxy(nil, nil, NewNativeTools(reg, nil))
+	proxy := NewProxy(nil, nil, NewNativeTools(reg, nil, nil))
 
 	dir, err := os.MkdirTemp("/tmp", "vmuxmcp")
 	if err != nil {
